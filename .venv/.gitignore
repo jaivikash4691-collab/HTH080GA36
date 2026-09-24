@@ -1,129 +1,156 @@
-```gitignore
-# =========================
+# ================================
+
+# Environment & Secrets
+
+# ================================
+
+.env
+.env.*
+!.env.example
+backend-ai/.env
+
+# ================================
+
 # Python
-# =========================
-__pycache__/
+
+# ================================
+
+**pycache**/
 *.py[cod]
 *$py.class
-*.so
+*.pyo
+*.pyd
 
-# =========================
+# ================================
+
 # Virtual Environments
-# =========================
+
+# ================================
+
 .venv/
 venv/
 env/
 ENV/
 
-# =========================
-# Environment / Secrets
-# =========================
-.env
-.env.*
-!.env.example
+# ================================
 
-# API keys / credentials
-*.pem
-*.key
-credentials.json
-secrets.json
+# Python Tools / Testing
 
-# =========================
+# ================================
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ================================
+
 # IDE / Editors
-# =========================
+
+# ================================
+
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# =========================
-# OS Files
-# =========================
-.DS_Store
-Thumbs.db
-desktop.ini
+# ================================
 
-# =========================
 # Logs
-# =========================
+
+# ================================
+
 *.log
 logs/
 
-# =========================
-# Testing / Coverage
-# =========================
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-.mypy_cache/
-.ruff_cache/
+# ================================
 
-# =========================
-# Temporary Files
-# =========================
-*.tmp
-*.temp
-*.bak
-*.swp
+# AI / ML Models
 
-# =========================
-# Uploaded Research Files
-# =========================
-uploads/
-temp/
-tmp/
+# ================================
 
-# PDF / document processing cache
-*.pdf.tmp
-*.docx.tmp
-
-# =========================
-# ML / Model Cache
-# =========================
-.cache/
-.cache/
-huggingface_cache/
 models/
 *.safetensors
 *.bin
 *.onnx
+*.pt
+*.pth
+*.ckpt
 
-# =========================
-# Generated Reports
-# =========================
+# ================================
+
+# Uploaded / Temporary Files
+
+# ================================
+
+uploads/
+temp/
+tmp/
+cache/
+*.tmp
+
+# ================================
+
+# Generated Reports / Output
+
+# ================================
+
 reports/
 generated_reports/
 output/
 
-# =========================
-# Database / Local Data
-# =========================
+# ================================
+
+# Local Databases
+
+# ================================
+
 *.db
 *.sqlite
 *.sqlite3
 
-# =========================
+# ================================
+
 # Node / Frontend
-# =========================
+
+# ================================
+
 node_modules/
 dist/
 build/
 .next/
 .nuxt/
-.cache/
 
-# =========================
-# Local deployment files
-# =========================
-.Docker/
-docker-compose.override.yml
+# ================================
 
-# =========================
-# Miscellaneous
-# =========================
-*.pid
-*.pid.lock
-```
+# OS Files
+
+# ================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ================================
+
+# Credentials / Certificates
+
+# ================================
+
+credentials.json
+secrets.json
+*.pem
+*.key
+*.crt
+
+# ================================
+
+# Local Configuration
+
+# ================================
+
+*.local
+*.local.json
+*.local.yaml
+*.local.yml
