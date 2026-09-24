@@ -698,7 +698,7 @@ Return JSON:
                         }
                     },
                     "required": ["limitation", "label", "evidence"]
-                ]
+                }
             },
             "conclusion": {"type": "string"},
             "experimental_setup": {"type": "string"},
