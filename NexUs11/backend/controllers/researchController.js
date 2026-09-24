@@ -146,17 +146,52 @@ export const researchController = {
         return res.status(500).json({ success: false, message: 'Server configuration error: OPENALEX_API_KEY is missing.' });
       }
 
-      // Fetch from OpenAlex
-      const response = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=10`, {
-        headers: {
-          'User-Agent': 'NEXUS-Research-Bot/1.0 (mailto:nexus-bot@example.com)', // Polite pool
-          'Authorization': `Bearer ${process.env.OPENALEX_API_KEY}`
+      const openAlexUrl = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=10`;
+      
+      let response;
+      let attempt = 0;
+      const maxAttempts = 2;
+      
+      while (attempt < maxAttempts) {
+        attempt++;
+        response = await fetch(openAlexUrl, {
+          headers: {
+            'User-Agent': 'NEXUS-Research-Bot/1.0 (mailto:nexus-bot@example.com)', // Polite pool
+            'Authorization': `Bearer ${process.env.OPENALEX_API_KEY}`
+          }
+        });
+        
+        if (response.status === 429 && attempt < maxAttempts) {
+          console.warn(`[Research Discovery] OpenAlex returned 429. Retrying... (Attempt ${attempt}/${maxAttempts})`);
+          const retryAfter = parseInt(response.headers.get('retry-after') || '2', 10);
+          // Wait at most 5 seconds to avoid hanging the request too long
+          const delay = Math.min(retryAfter * 1000, 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
         }
-      });
+        break;
+      }
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAlex returned ${response.status}: ${errorText}`);
+        let errorText = 'Unknown Error';
+        try { errorText = await response.text(); } catch(e) {}
+        
+        console.error(`[Research Discovery] OpenAlex API Request Failed:
+          - Endpoint: /works (OpenAlex)
+          - HTTP Method: GET
+          - Status: ${response.status}
+          - Error: ${errorText.substring(0, 500)}`);
+          
+        if (response.status === 429) {
+          return res.status(429).json({ 
+            success: false, 
+            message: 'Research database is currently experiencing high traffic (Rate Limit). Please try again in a moment.' 
+          });
+        }
+        return res.status(502).json({ 
+          success: false, 
+          message: 'Upstream research database returned an error. Please try again later.' 
+        });
       }
 
       const data = await response.json();
@@ -188,8 +223,8 @@ export const researchController = {
 
       res.json({ query, results });
     } catch (err) {
-      console.error('[Research Discovery]', err);
-      res.status(500).json({ success: false, message: `Research discovery failed: ${err.message}` });
+      console.error('[Research Discovery] Internal error during request processing:', err.message);
+      res.status(500).json({ success: false, message: 'Research discovery encountered an internal server error.' });
     }
   }
 };
