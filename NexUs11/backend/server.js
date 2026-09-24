@@ -82,8 +82,8 @@ app.post('/api/literature/ask', analyzerController.ask);
 // Error Handling Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`[NEXUS Server] Running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[NEXUS Server] Running on port ${PORT}`);
 });
 
 export default app;
