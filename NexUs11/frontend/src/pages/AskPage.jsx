@@ -8,10 +8,16 @@ export const AskPage = () => {
   const [inputText, setInputText] = useState('');
   const chatBottomRef = useRef(null);
   const [addedPapers, setAddedPapers] = useState(new Set());
-  const [explicitMode, setExplicitMode] = useState(null);
+  
+  // Use exact requested state name: chatMode
+  const [chatMode, setChatMode] = useState(papers.length === 0 ? 'discovery' : 'analysis');
 
-  const activeMode = explicitMode || (papers.length === 0 ? 'discovery' : 'analysis');
-  const isDiscoveryMode = activeMode === 'discovery';
+  // Sync mode when papers change (if 0 papers, force discovery; if 1+, user can still switch but let's default to analysis if they just uploaded)
+  useEffect(() => {
+    if (papers.length === 0) setChatMode('discovery');
+  }, [papers.length]);
+
+  const isDiscoveryMode = chatMode === 'discovery';
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -118,6 +124,32 @@ export const AskPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up pb-12">
+      {/* Mode Switcher - Prominently at the top */}
+      <div className="flex justify-center mb-2">
+        <div className="flex items-center bg-slate-200 p-1.5 rounded-xl border border-slate-300 shadow-sm">
+          <button
+            onClick={() => setChatMode('discovery')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${
+              chatMode === 'discovery'
+                ? 'bg-white text-[#1E1B4B] shadow-sm' 
+                : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
+            }`}
+          >
+            🔎 Discover Research
+          </button>
+          <button
+            onClick={() => setChatMode('analysis')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${
+              chatMode === 'analysis'
+                ? 'bg-white text-[#1E1B4B] shadow-sm' 
+                : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
+            }`}
+          >
+            📚 Analyze My Papers
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
         <div>
@@ -137,36 +169,8 @@ export const AskPage = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-3">
-          {/* Mode Switcher */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-            <button
-              onClick={() => setExplicitMode('discovery')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                isDiscoveryMode 
-                  ? 'bg-white text-[#1E1B4B] shadow-sm' 
-                  : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
-              }`}
-            >
-              <Search className="w-3.5 h-3.5" />
-              Discover Research
-            </button>
-            <button
-              onClick={() => setExplicitMode('analysis')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                !isDiscoveryMode 
-                  ? 'bg-white text-[#1E1B4B] shadow-sm' 
-                  : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Analyze My Papers
-            </button>
-          </div>
-
-          <div className="text-xs text-[#64748B] font-semibold bg-slate-100 px-3 py-1.5 rounded-xl">
-            {papers.length} {papers.length === 1 ? 'Paper Active' : 'Papers Active'}
-          </div>
+        <div className="text-xs text-[#64748B] font-semibold bg-slate-100 px-3 py-1.5 rounded-xl">
+          {papers.length} {papers.length === 1 ? 'Paper Active' : 'Papers Active'}
         </div>
       </div>
 
