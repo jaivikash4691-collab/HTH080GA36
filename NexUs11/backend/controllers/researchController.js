@@ -141,10 +141,16 @@ export const researchController = {
         return res.status(400).json({ success: false, message: 'Query is required' });
       }
 
+      if (!process.env.OPENALEX_API_KEY) {
+        console.error('[Research Discovery] OPENALEX_API_KEY is missing from environment variables.');
+        return res.status(500).json({ success: false, message: 'Server configuration error: OPENALEX_API_KEY is missing.' });
+      }
+
       // Fetch from OpenAlex
       const response = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=10`, {
         headers: {
-          'User-Agent': 'NEXUS-Research-Bot/1.0 (mailto:nexus-bot@example.com)' // Polite pool
+          'User-Agent': 'NEXUS-Research-Bot/1.0 (mailto:nexus-bot@example.com)', // Polite pool
+          'Authorization': `Bearer ${process.env.OPENALEX_API_KEY}`
         }
       });
       
