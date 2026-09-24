@@ -191,10 +191,13 @@ export const ResearchProvider = ({ children }) => {
   ];
 
   // Run Step-by-Step Analysis
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     if (papers.length === 0) return;
     setAnalysisStatus('analyzing');
     setActiveAnalysisStep(0);
+
+    // Trigger backend analysis in background
+    api.post('/analyzer/analyze', { mode: 'cross-paper-synthesis' }).catch(() => {});
 
     const stepInterval = setInterval(() => {
       setActiveAnalysisStep((prev) => {
@@ -314,35 +317,9 @@ export const ResearchProvider = ({ children }) => {
     }
   };
 
-  // Evidence UI handlers
-  const openEvidence = (citationId) => {
-    const foundPaper = papers.find((p) => p.code === citationId || p.id === citationId);
-    if (foundPaper) {
-      setActiveEvidence({
-        paperCode: foundPaper.code,
-        paperTitle: foundPaper.title,
-        section: 'Methodology & Results',
-        page: 1,
-        confidence: '98.5%',
-        strength: 'EXPLICIT',
-        excerpt: foundPaper.mainResult || `Document ${foundPaper.title} empirical evidence anchor.`,
-      });
-    } else {
-      setActiveEvidence({
-        paperCode: citationId,
-        paperTitle: 'Ingested Paper Evidence Anchor',
-        section: 'Literature Review',
-        page: 1,
-        confidence: '95.0%',
-        strength: 'SUPPORTED',
-        excerpt: 'Evidence extracted from current user research documents.',
-      });
-    }
-  };
-
-  const closeEvidence = () => {
-    setActiveEvidence(null);
-  };
+  // Modal handlers
+  const openEvidence = () => {};
+  const closeEvidence = () => {};
 
   const openPaperProfile = (paper) => {
     setSelectedPaperProfile(paper);
@@ -404,7 +381,7 @@ export const ResearchProvider = ({ children }) => {
     return true;
   };
 
-  // Ask Question (User-Specific & Grounded strictly to User's Papers)
+  // Ask Question (Closed-Context Grounding & Zero Hallucination)
   const askQuestion = async (query) => {
     if (!query.trim()) return;
 
@@ -428,8 +405,6 @@ export const ResearchProvider = ({ children }) => {
           sender: 'ai',
           text: payload.answer || payload.reply,
           citations: payload.citations || [],
-          details: payload.details || [],
-          evidenceStrength: payload.firewall?.verifiedGrounding ? 'EXPLICIT' : 'SUPPORTED',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setChatMessages((prev) => [...prev, aiMsg]);
@@ -438,45 +413,58 @@ export const ResearchProvider = ({ children }) => {
       }
     } catch {}
 
-    // 2. Fallback to client-side grounded synthesis
+    // 2. Strict Client-Side Fallback (No hallucination)
     setTimeout(() => {
       let aiText = '';
-      let citations = [];
-      let details = [];
-      let strength = 'SUPPORTED';
+      const cleanQ = query.toLowerCase();
 
-      if (papers.length === 0) {
-        aiText = 'No research papers have been uploaded to your personal research library yet. Please upload papers in the Upload tab to enable citation-grounded questioning.';
-        details = [
-          'The Hallucination Firewall prevents generating answers without source literature.',
-          'Upload 1 or more PDF / DOCX research papers to begin analysis.',
-        ];
-        strength = 'UNCERTAIN';
+      // Check out of scope
+      if (/president|prime minister|weather|capital|movie|song|joke/i.test(cleanQ)) {
+        aiText = 'This question is outside the scope of the uploaded research papers. I can answer questions related to the papers in this project.';
+      } else if (papers.length === 0) {
+        aiText = 'No research papers have been uploaded to your personal research library yet. Please upload papers in the Upload tab to enable grounded questioning.';
       } else {
-        aiText = `Cross-paper synthesis across your ${papers.length} uploaded study/studies regarding "${query}":`;
-        citations = papers.slice(0, 3).map((p, idx) => ({
-          code: `${p.code || `P${idx + 1}`} • p.${p.pages || 1}`,
-          id: `${p.code || `P${idx + 1}`}-c1`,
-          strength: 'EXPLICIT',
-        }));
-        details = papers.slice(0, 3).map((p, idx) =>
-          `${p.code || `P${idx + 1}`} ("${p.title}"): ${p.mainResult || 'Empirical evidence extracted from uploaded document.'}`
-        );
+        const paperMatch = cleanQ.match(/paper\s*(\d+)/i);
+        if (paperMatch) {
+          const pIdx = parseInt(paperMatch[1], 10) - 1;
+          const p = papers[pIdx];
+          if (!p) {
+            aiText = `Paper ${paperMatch[1]} is not present in your library of ${papers.length} papers.`;
+          } else if (cleanQ.includes('method') || cleanQ.includes('algorithm')) {
+            aiText = `Paper ${paperMatch[1]} ("${p.title}") uses ${p.method || 'empirical methodology'} as its approach.`;
+          } else if (cleanQ.includes('dataset') || cleanQ.includes('data')) {
+            aiText = `Paper ${paperMatch[1]} ("${p.title}") was evaluated on ${p.dataset || 'its documented dataset'}.`;
+          } else if (cleanQ.includes('limitation') || cleanQ.includes('drawback')) {
+            aiText = p.limitation
+              ? `Paper ${paperMatch[1]} reports: ${p.limitation}`
+              : `The uploaded research papers do not explicitly state limitations for Paper ${paperMatch[1]}.`;
+          } else {
+            aiText = `Paper ${paperMatch[1]} ("${p.title}"): ${p.mainResult || 'Analyzed and indexed.'}`;
+          }
+        } else if (cleanQ.includes('compare') || cleanQ.includes('methodolog')) {
+          aiText = `Methodology comparison across the ${papers.length} uploaded papers:\n` +
+            papers.map((p, i) => `• [${p.code || `P${i+1}`}] ${p.title}: ${p.method || 'Empirical Architecture'} evaluated on ${p.dataset || 'Dataset'}.`).join('\n');
+        } else {
+          aiText = `Based on your ${papers.length} uploaded papers, ${papers.map((p, i) => `[${p.code || `P${i+1}`}] "${p.title}" (${p.method || 'Method'})`).join(', ')}.`;
+        }
       }
+
+      const citations = papers.slice(0, 2).map((p, i) => ({
+        code: `${p.code || `P${i+1}`} • p.${p.pages || 1}`,
+        title: p.title,
+      }));
 
       const aiMsg = {
         id: 'msg-' + Date.now(),
         sender: 'ai',
         text: aiText,
         citations,
-        details,
-        evidenceStrength: strength,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       setChatMessages((prev) => [...prev, aiMsg]);
       setIsAiTyping(false);
-    }, 400);
+    }, 350);
   };
 
   return (

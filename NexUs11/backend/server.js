@@ -33,15 +33,6 @@ app.use(
 app.use(express.json());
 app.use(authMiddleware);
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'NEXUS Academic AI Engine',
-    message: 'Backend is running'
-  });
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -58,6 +49,13 @@ app.use('/api/analyzer', analyzerRoutes);
 app.use('/api/conversations', conversationsRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/feedback', feedbackRoutes);
+
+// Project-based report & analysis endpoints (Req 56, 57, 58)
+app.post('/api/projects/:projectId/analyze', analyzerController.analyze);
+app.get('/api/projects/:projectId/analyzed-paper', analyzerController.getReport);
+app.get('/api/projects/:projectId/analyzed-paper/download', analyzerController.downloadReportPdf);
+app.get('/api/research/analyzed-paper', analyzerController.getReport);
+app.get('/api/research/analyzed-paper/download', analyzerController.downloadReportPdf);
 
 // Compatibility alias routes (/api/literature/*)
 app.get('/api/literature/papers', paperController.getPapers);
@@ -82,8 +80,8 @@ app.post('/api/literature/ask', analyzerController.ask);
 // Error Handling Middleware
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[NEXUS Server] Running on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`[NEXUS Server] Running on http://localhost:${PORT}`);
 });
 
 export default app;

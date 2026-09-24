@@ -14,6 +14,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DROP TABLE IF EXISTS public.paper_chunks CASCADE;
 DROP TABLE IF EXISTS public.messages CASCADE;
 DROP TABLE IF EXISTS public.conversations CASCADE;
+DROP TABLE IF EXISTS public.research_reports CASCADE;
 DROP TABLE IF EXISTS public.research_findings CASCADE;
 DROP TABLE IF EXISTS public.research_gaps CASCADE;
 DROP TABLE IF EXISTS public.research_directions CASCADE;
@@ -250,6 +251,26 @@ CREATE TABLE public.feedback (
 );
 
 -- ---------------------------------------------------------------------------
+-- 11. RESEARCH REPORTS (Generated Academic Analysis Papers)
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.research_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID,
+    session_id UUID REFERENCES public.research_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    topic TEXT,
+    abstract TEXT,
+    content TEXT NOT NULL,
+    structured_analysis JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status TEXT NOT NULL DEFAULT 'completed'
+        CHECK (status IN ('processing', 'completed', 'failed')),
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------------------------
 -- INDEXES
 -- Every indexed column exists before this section runs.
 -- ---------------------------------------------------------------------------
@@ -310,6 +331,12 @@ CREATE INDEX idx_directions_session_id
 CREATE INDEX idx_feedback_user_id
     ON public.feedback(user_id);
 
+CREATE INDEX idx_reports_user_id
+    ON public.research_reports(user_id);
+
+CREATE INDEX idx_reports_session_id
+    ON public.research_reports(session_id);
+
 -- ---------------------------------------------------------------------------
 -- ROW LEVEL SECURITY
 -- ---------------------------------------------------------------------------
@@ -322,6 +349,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.research_findings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.research_gaps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.research_directions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.research_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------------------
@@ -476,6 +504,20 @@ CREATE POLICY feedback_update_own ON public.feedback
 CREATE POLICY feedback_delete_own ON public.feedback
     FOR DELETE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS reports_select_own ON public.research_reports;
+DROP POLICY IF EXISTS reports_insert_own ON public.research_reports;
+DROP POLICY IF EXISTS reports_update_own ON public.research_reports;
+DROP POLICY IF EXISTS reports_delete_own ON public.research_reports;
+
+CREATE POLICY reports_select_own ON public.research_reports
+    FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY reports_insert_own ON public.research_reports
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY reports_update_own ON public.research_reports
+    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY reports_delete_own ON public.research_reports
+    FOR DELETE USING (auth.uid() = user_id);
+
 -- ---------------------------------------------------------------------------
 -- AUTH USER -> PROFILE TRIGGER
 -- ---------------------------------------------------------------------------
@@ -539,6 +581,7 @@ $$;
 DROP TRIGGER IF EXISTS profiles_set_updated_at ON public.profiles;
 DROP TRIGGER IF EXISTS sessions_set_updated_at ON public.research_sessions;
 DROP TRIGGER IF EXISTS conversations_set_updated_at ON public.conversations;
+DROP TRIGGER IF EXISTS reports_set_updated_at ON public.research_reports;
 
 CREATE TRIGGER profiles_set_updated_at
 BEFORE UPDATE ON public.profiles
@@ -550,6 +593,10 @@ FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE TRIGGER conversations_set_updated_at
 BEFORE UPDATE ON public.conversations
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER reports_set_updated_at
+BEFORE UPDATE ON public.research_reports
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- =============================================================================

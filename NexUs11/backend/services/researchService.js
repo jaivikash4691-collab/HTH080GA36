@@ -1,23 +1,29 @@
 import { supabase } from '../config/supabase.js';
 import paperService from './paperService.js';
+import deepAnalysisService from './deepAnalysisService.js';
 
 export const researchService = {
   async getFindings(userId) {
     if (!userId) return { findings: [] };
 
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('research_findings')
-          .select('*')
-          .eq('user_id', userId);
-        if (!error && data) return { findings: data };
-      } catch {}
-    }
-
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length === 0) {
       return { findings: [] };
+    }
+
+    const cached = deepAnalysisService.getCache(userId);
+    if (cached?.commonFindings) {
+      return {
+        findings: cached.commonFindings.map((cf, idx) => ({
+          id: cf.id || `F${idx + 1}`,
+          user_id: userId,
+          title: cf.title,
+          statement: cf.statement,
+          supportedRatio: `${cf.supportingPapers.length} / ${papers.length} papers`,
+          coveragePercent: Math.round((cf.supportingPapers.length / papers.length) * 100),
+          supportingPaperIds: cf.supportingPapers,
+        })),
+      };
     }
 
     // Dynamic synthesis based on user's real papers
@@ -28,10 +34,7 @@ export const researchService = {
       statement: `Empirical validation conducted in ${p.title} using ${p.methodology || 'documented methodology'}.`,
       supportedRatio: `${papers.length} / ${papers.length} papers`,
       coveragePercent: 100,
-      evidenceStrength: 'EXPLICIT',
       supportingPaperIds: [p.code || `P${idx + 1}`],
-      citationLabel: `${p.code || `P${idx + 1}`} • p.${p.pages || 1}`,
-      citationChunkId: `${p.code || `P${idx + 1}`}-c1`,
     }));
 
     return { findings };
@@ -40,22 +43,26 @@ export const researchService = {
   async getGaps(userId) {
     if (!userId) return { gaps: [], radar: [] };
 
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('research_gaps')
-          .select('*')
-          .eq('user_id', userId);
-        if (!error && data) return { gaps: data, radar: data };
-      } catch {}
-    }
-
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length === 0) {
       return { gaps: [], radar: [] };
     }
 
-    // Real dynamic gaps discovered from user's uploaded library
+    const cached = deepAnalysisService.getCache(userId);
+    if (cached?.researchGaps) {
+      const formattedGaps = cached.researchGaps.map((g) => ({
+        id: g.id,
+        user_id: userId,
+        category: 'Methodological & Generalization Gap',
+        title: g.title,
+        description: g.description,
+        paperCodes: g.papersCovering || papers.map((p, i) => p.code || `P${i + 1}`),
+        whyItMatters: g.whyItMatters,
+        whatIsMissing: g.whatIsMissing,
+      }));
+      return { gaps: formattedGaps, radar: formattedGaps };
+    }
+
     const radar = [
       {
         id: `gap_${userId}_1`,
@@ -64,8 +71,6 @@ export const researchService = {
         title: `Cross-dataset validation on ${papers[0]?.title || 'uploaded literature'}`,
         description: `Comparative analysis of uploaded papers highlights need for external cohort benchmarking.`,
         paperCodes: papers.map((p, i) => p.code || `P${i + 1}`),
-        evidenceStrength: 'SUPPORTED',
-        type: 'ai_synthesized',
       },
       {
         id: `gap_${userId}_2`,
@@ -74,8 +79,6 @@ export const researchService = {
         title: `Deployment latency & compute constraints`,
         description: `Standardized evaluation metrics for real-time inference across edge devices are unverified.`,
         paperCodes: papers.map((p, i) => p.code || `P${i + 1}`),
-        evidenceStrength: 'SUPPORTED',
-        type: 'author_identified',
       },
     ];
 
@@ -85,19 +88,23 @@ export const researchService = {
   async getDirections(userId) {
     if (!userId) return { directions: [] };
 
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('research_directions')
-          .select('*')
-          .eq('user_id', userId);
-        if (!error && data) return { directions: data };
-      } catch {}
-    }
-
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length === 0) {
       return { directions: [] };
+    }
+
+    const cached = deepAnalysisService.getCache(userId);
+    if (cached?.researchDirections) {
+      return {
+        directions: cached.researchDirections.map((d, i) => ({
+          id: `dir_${userId}_${i + 1}`,
+          user_id: userId,
+          proposedTitle: d.suggestion,
+          researchQuestion: cached.researchQuestions?.[i] || `How can ${d.category} be advanced based on reviewed papers?`,
+          suggestedMethodology: d.rationale,
+          opportunityType: d.category,
+        })),
+      };
     }
 
     return {
@@ -138,6 +145,14 @@ export const researchService = {
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length < 2) return { contradictions: [], hunterItems: [] };
 
+    const cached = deepAnalysisService.getCache(userId);
+    if (cached?.contradictions) {
+      return {
+        contradictions: cached.contradictions,
+        hunterItems: cached.contradictions,
+      };
+    }
+
     return {
       contradictions: [],
       hunterItems: [],
@@ -149,17 +164,16 @@ export const researchService = {
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length === 0) return { timeline: [] };
 
-    return {
-      timeline: papers.map((p, idx) => ({
-        year: p.publication_year || (2022 + idx),
-        phase: `Stage ${idx + 1}`,
-        architecture: p.methodology || 'Methodology',
-        papers: [p.code || `P${idx + 1}`],
-        significance: p.title,
-        computeClass: 'Standard',
-        tag: 'User Upload',
-      })),
-    };
+    const sorted = [...papers].sort((a, b) => (a.year || 2024) - (b.year || 2024));
+    const timeline = sorted.map((p, idx) => ({
+      year: p.year || (2020 + idx),
+      title: p.title,
+      code: p.code || `P${idx + 1}`,
+      methodology: p.methodology || 'Methodology',
+      breakthrough: p.main_result || 'Ingested literature contribution',
+    }));
+
+    return { timeline };
   },
 
   async getCombinations(userId) {
@@ -170,47 +184,36 @@ export const researchService = {
     return {
       combinations: [
         {
-          techniqueA: papers[0].title,
-          techniqueB: papers[1].title,
-          status: 'Uncombined in uploaded documents',
-          rationale: 'Complementary methodologies identified across your library.',
+          id: 'comb_1',
+          paperA: papers[0].code || 'P1',
+          paperB: papers[1].code || 'P2',
+          titleA: papers[0].title,
+          titleB: papers[1].title,
+          opportunity: `Hybrid architecture synthesizing ${papers[0].methodology || 'Methodology A'} with ${papers[1].methodology || 'Methodology B'}`,
+          feasibility: 'High',
         },
       ],
     };
   },
 
   async getOpportunities(userId) {
-    if (!userId) return { opportunities: [] };
-    const { papers } = await paperService.getPapers(userId);
-    if (!papers || papers.length === 0) return { opportunities: [] };
-
-    return {
-      opportunities: [
-        {
-          id: 'OPP-1',
-          title: `Synthesis of ${papers[0].title}`,
-          question: `How does harmonizing ${papers.map((p, i) => p.code || `P${i + 1}`).join(' with ')} improve generalizability?`,
-          suggestedMethodology: 'Comparative ablation study',
-          noveltyScore: 90,
-          effortMonths: 3,
-        },
-      ],
-    };
+    return this.getDirections(userId);
   },
 
   async getExperiments(userId) {
-    if (!userId) return { experimentPlan: null };
+    if (!userId) return { experiments: [] };
     const { papers } = await paperService.getPapers(userId);
-    if (!papers || papers.length === 0) return { experimentPlan: null };
+    if (!papers || papers.length === 0) return { experiments: [] };
 
     return {
-      experimentPlan: {
-        title: `Validation Plan for ${papers[0].title}`,
-        baseline: papers[0].methodology || 'Baseline Architecture',
-        proposed: `Harmonized Multi-Study Model (${papers.map((p, i) => p.code || `P${i + 1}`).join('+')})`,
-        metrics: 'AUROC • Precision • Inference Latency',
-        dataset: papers[0].dataset || 'Evaluation Cohort',
-      },
+      experiments: [
+        {
+          id: 'exp_1',
+          title: `Controlled Evaluation Protocol across ${papers.length} Papers`,
+          phases: ['Dataset Standardization', 'Cross-Model Inference', 'Metric Harmonization'],
+          durationMonths: 3,
+        },
+      ],
     };
   },
 
@@ -221,42 +224,27 @@ export const researchService = {
 
     return {
       lineage: papers.map((p, idx) => ({
-        step: idx + 1,
+        id: `lin_${idx + 1}`,
+        paperCode: p.code || `P${idx + 1}`,
         title: p.title,
-        evidence: p.main_result || 'Extracted claim',
-        paper: p.code || `P${idx + 1}`,
+        contribution: p.main_result || 'Literature baseline',
       })),
     };
   },
 
   async getFrontier(userId) {
     if (!userId) return { frontier: [] };
-    const { papers } = await paperService.getPapers(userId);
-    if (!papers || papers.length === 0) return { frontier: [] };
-
-    return {
-      frontier: papers.map((p, idx) => ({
-        x: (idx + 1) * 20,
-        y: 50 + idx * 10,
-        name: p.title,
-        code: p.code || `P${idx + 1}`,
-      })),
-    };
+    return this.getGaps(userId);
   },
 
-  async getImpact(userId, timelineMonths = 6) {
-    if (!userId) return { impact: null };
-    const { papers } = await paperService.getPapers(userId);
-    if (!papers || papers.length === 0) return { impact: null };
-
+  async getImpact(userId) {
+    if (!userId) return { impact: [] };
     return {
-      timelineMonths,
-      impact: {
-        noveltyScore: 88,
-        feasibilityScore: 92,
-        publicationProbability: '86%',
-        rationale: `Executable directly using parameters from your ${papers.length} uploaded papers.`,
-      },
+      impact: [
+        { metric: 'Reproducibility', score: 95 },
+        { metric: 'Generalizability', score: 88 },
+        { metric: 'Computational Efficiency', score: 92 },
+      ],
     };
   },
 };

@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ResearchProvider, useResearch } from './context/ResearchContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import { EvidencePanel } from './components/EvidencePanel';
 import { PaperProfileModal } from './components/PaperProfileModal';
 import { ValidateGapModal } from './components/ValidateGapModal';
 import { JudgeTourBanner } from './components/JudgeTourBanner';
@@ -15,6 +14,7 @@ import { PaperDiscoveryPage } from './pages/PaperDiscoveryPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UploadPage } from './pages/UploadPage';
 import { AnalysisPage } from './pages/AnalysisPage';
+import { AnalyzedPaperPage } from './pages/AnalyzedPaperPage';
 import { LandscapePage } from './pages/LandscapePage';
 import { ComparisonPage } from './pages/ComparisonPage';
 import { FindingsPage } from './pages/FindingsPage';
@@ -34,7 +34,7 @@ function NexusApp() {
     return user ? 'dashboard' : 'landing';
   });
 
-  // View navigation handler with route protection (Section 3.5)
+  // View navigation handler with route protection
   const handleNavigate = (view, targetAnchor = null) => {
     // Public views that don't force auth redirect
     const publicViews = ['landing', 'auth', 'papers_discovery', 'feedback'];
@@ -78,7 +78,7 @@ function NexusApp() {
 
   return (
     <div className="min-h-screen bg-[#FBF9F5] text-[#1E1B4B] flex flex-col font-sans selection:bg-[#1E1B4B] selection:text-white">
-      {/* 4.1 Persistent Sticky Navbar */}
+      {/* Persistent Sticky Navbar */}
       <Navbar
         currentView={currentView}
         onViewChange={handleNavigate}
@@ -105,7 +105,7 @@ function NexusApp() {
             )}
           </main>
         ) : (
-          // Authenticated Workspace Layout with Persistent Sidebar (Section 5)
+          // Authenticated Workspace Layout with Persistent Sidebar
           <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1600px] mx-auto">
             <Sidebar
               currentView={currentView}
@@ -127,7 +127,14 @@ function NexusApp() {
               )}
               {currentView === 'analysis' && (
                 <AnalysisPage
-                  onViewLandscape={() => handleNavigate('landscape')}
+                  onViewLandscape={() => handleNavigate('analyzed_paper')}
+                  onNavigate={handleNavigate}
+                />
+              )}
+              {currentView === 'analyzed_paper' && (
+                <AnalyzedPaperPage
+                  onBack={() => handleNavigate('dashboard')}
+                  onNavigate={handleNavigate}
                 />
               )}
               {currentView === 'landscape' && (
@@ -152,7 +159,7 @@ function NexusApp() {
                 <StrategyPage onNavigate={handleNavigate} />
               )}
               {currentView === 'report' && (
-                <ReportPage />
+                <ReportPage onNavigate={handleNavigate} />
               )}
               {currentView === 'feedback' && (
                 <FeedbackPage />
@@ -162,16 +169,13 @@ function NexusApp() {
         )}
       </div>
 
-      {/* Slide-Over Global Evidence Drawer (Section 18) */}
-      <EvidencePanel />
-
-      {/* Detailed Paper Profile Modal (Section 11) */}
+      {/* Detailed Paper Profile Modal */}
       <PaperProfileModal />
 
-      {/* Signature Feature: Validate Gap Modal (Section 11) */}
+      {/* Validate Gap Modal */}
       <ValidateGapModal />
 
-      {/* 30-Second Hackathon Judge Tour Bar (Section 21 & 51) */}
+      {/* Tour Banner */}
       <JudgeTourBanner
         currentView={currentView}
         onNavigate={handleNavigate}

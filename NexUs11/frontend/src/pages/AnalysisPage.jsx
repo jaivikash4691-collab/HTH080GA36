@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { useResearch } from '../context/ResearchContext';
 import { ProgressPipeline } from '../components/ProgressPipeline';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, FileText } from 'lucide-react';
 
-export const AnalysisPage = ({ onViewLandscape }) => {
+export const AnalysisPage = ({ onViewLandscape, onNavigate }) => {
   const { runAnalysis, analysisStatus } = useResearch();
 
   // If entering page while idle, automatically run
@@ -15,7 +15,16 @@ export const AnalysisPage = ({ onViewLandscape }) => {
 
   return (
     <div className="py-8 space-y-6">
-      <div className="flex justify-end max-w-2xl mx-auto">
+      <div className="flex items-center justify-between max-w-2xl mx-auto">
+        <button
+          type="button"
+          onClick={() => onNavigate?.('analyzed_paper')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>View Analyzed Paper</span>
+        </button>
+
         <button
           type="button"
           onClick={runAnalysis}
@@ -26,7 +35,12 @@ export const AnalysisPage = ({ onViewLandscape }) => {
         </button>
       </div>
 
-      <ProgressPipeline onCompleteAction={onViewLandscape} />
+      <ProgressPipeline
+        onCompleteAction={() => onNavigate?.('analyzed_paper')}
+        onViewAnalyzedPaper={() => onNavigate?.('analyzed_paper')}
+      />
     </div>
   );
 };
+
+export default AnalysisPage;

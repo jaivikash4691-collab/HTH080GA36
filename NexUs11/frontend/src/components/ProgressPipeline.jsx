@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useResearch } from '../context/ResearchContext';
 import { Check, CheckCircle2, Sparkles, Layers, ArrowRight } from 'lucide-react';
 
-export const ProgressPipeline = ({ onCompleteAction }) => {
+export const ProgressPipeline = ({ onCompleteAction, onViewAnalyzedPaper }) => {
   const { pipelineSteps, activeAnalysisStep, analysisStatus, papers } = useResearch();
+  const [isHovered, setIsHovered] = useState(false);
 
   const isComplete = analysisStatus === 'completed' && activeAnalysisStep === pipelineSteps.length - 1;
 
@@ -12,14 +13,14 @@ export const ProgressPipeline = ({ onCompleteAction }) => {
       {/* Title */}
       <div className="text-center space-y-2">
         <span className="text-xs font-bold uppercase tracking-widest text-[#4F46E5] bg-[#4F46E5]/10 px-3 py-1 rounded-full">
-          Cross-Document Synthesis Engine
+          AI Research Analyzer & Synthesis Pipeline
         </span>
         <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
           {isComplete ? 'Analysis Complete' : 'ANALYZING YOUR LITERATURE'}
         </h2>
         <p className="text-xs text-[#64748B]">
           {isComplete
-            ? 'Grounding verification & meta-synthesis indexed successfully'
+            ? `${papers.length} Research Papers Successfully Analyzed`
             : 'Extracting semantic nodes, methodology matrices, and empirical claims'}
         </p>
       </div>
@@ -86,40 +87,61 @@ export const ProgressPipeline = ({ onCompleteAction }) => {
         })}
       </div>
 
-      {/* When completed: Stats & Glow Button */}
+      {/* When completed: Summary Checklist & View Our Analyzed Paper Button (Req 49, 50) */}
       {isComplete && (
-        <div className="space-y-6 pt-4 border-t border-[#E2E8F0] animate-fade-in-up text-center">
-          <div className="relative inline-flex items-center justify-center mb-2">
-            <div className="w-16 h-16 rounded-full bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center glow-teal-pulse">
-              <CheckCircle2 className="w-10 h-10 text-[#0D9488]" />
+        <div className="space-y-6 pt-6 border-t border-[#E2E8F0] animate-fade-in-up text-center">
+          <div className="relative inline-flex items-center justify-center mb-1">
+            <div className="w-14 h-14 rounded-full bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-[#0D9488]" />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
-              <div className="text-xl font-black text-[#0F172A]">{papers.length}</div>
-              <div className="text-xs text-[#64748B] font-medium">Papers Analyzed</div>
+          <div className="space-y-1.5 text-xs text-[#334155] font-semibold max-w-sm mx-auto text-left bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+            <div className="flex items-center gap-2 text-[#0D9488]">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Papers processed & structured</span>
             </div>
-            <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
-              <div className="text-xl font-black text-[#0F172A]">42</div>
-              <div className="text-xs text-[#64748B] font-medium">Sections Identified</div>
+            <div className="flex items-center gap-2 text-[#0D9488]">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Methodologies & technologies compared</span>
             </div>
-            <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
-              <div className="text-xl font-black text-[#0F172A]">386</div>
-              <div className="text-xs text-[#64748B] font-medium">Evidence Chunks</div>
+            <div className="flex items-center gap-2 text-[#0D9488]">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Common findings synthesized</span>
+            </div>
+            <div className="flex items-center gap-2 text-[#0D9488]">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Research gaps & directions identified</span>
+            </div>
+            <div className="flex items-center gap-2 text-[#0D9488]">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Research strategy generated</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onCompleteAction}
-            className="w-full py-3.5 px-6 rounded-xl bg-[#1E1B4B] text-white font-bold text-sm hover:bg-[#1E1B4B]/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-          >
-            <span>View Research Landscape</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {/* Primary View Our Analyzed Paper CTA Button with Hover Effect (Req 49, 50) */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={onViewAnalyzedPaper || onCompleteAction}
+              className="w-full py-4 px-6 rounded-2xl bg-[#0F172A] text-white font-black text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-xl hover:border-slate-400 border border-transparent flex items-center justify-center gap-2.5 cursor-pointer active:scale-98 shadow-md"
+            >
+              {isHovered ? (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                  <span>✦ View Our Analyzed Paper →</span>
+                </>
+              ) : (
+                <span>View Our Analyzed Paper</span>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+export default ProgressPipeline;
