@@ -95,7 +95,11 @@ export const AuthCard = ({ onSuccess }) => {
       {authError && (
         <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-shake">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
-          <span className="font-medium leading-relaxed">{authError}</span>
+          <span className="font-medium leading-relaxed">
+            {authError === 'rate_limit' 
+              ? 'Email sending is temporarily rate-limited by the authentication provider. Please try again later.' 
+              : authError}
+          </span>
         </div>
       )}
 

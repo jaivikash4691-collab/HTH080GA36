@@ -208,12 +208,15 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (backendErr) {
       const msg = backendErr.message || '';
-      if (
+      if (msg.toLowerCase().includes('rate limit') || backendErr.statusCode === 429) {
+        setAuthError('rate_limit');
+        setLoading(false);
+        return false;
+      } else if (
         msg.toLowerCase().includes('already exists') ||
         msg.toLowerCase().includes('already registered') ||
         msg.toLowerCase().includes('match') ||
-        msg.toLowerCase().includes('least 6') ||
-        msg.toLowerCase().includes('rate limit')
+        msg.toLowerCase().includes('least 6')
       ) {
         setAuthError(msg);
         setLoading(false);
@@ -240,7 +243,7 @@ export const AuthProvider = ({ children }) => {
           ) {
             setAuthError('An account with this email already exists. Please log in.');
           } else if (error.status === 429 || error.message?.toLowerCase().includes('rate limit')) {
-            setAuthError('Email sending is temporarily rate-limited by the authentication provider. Please try again later.');
+            setAuthError('rate_limit');
           } else {
             setAuthError(error.message);
           }
