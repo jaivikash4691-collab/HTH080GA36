@@ -55,6 +55,10 @@ export const authService = {
             const err = new Error('An account with this email already exists. Please log in.');
             err.statusCode = 409;
             throw err;
+          } else if (error.status === 429 || error.message?.toLowerCase().includes('rate limit')) {
+            const err = new Error('Email sending is temporarily rate-limited by the authentication provider. Please try again later.');
+            err.statusCode = 429;
+            throw err;
           }
           // If domain is restricted or invalid format from remote provider, fallback cleanly
           console.warn('[NEXUS Auth] Supabase signUp notice:', error.message);
@@ -67,7 +71,7 @@ export const authService = {
           createdUserId = data.user.id;
         }
       } catch (err) {
-        if (err.statusCode === 409) throw err;
+        if (err.statusCode === 409 || err.statusCode === 429) throw err;
         console.warn('[NEXUS Auth] Supabase signUp error fallback:', err.message);
       }
     }
