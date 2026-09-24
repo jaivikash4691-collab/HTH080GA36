@@ -50,7 +50,7 @@ class DatabaseService:
         except Exception as e:
             raise Exception(f"Database error creating paper: {str(e)}")
 
-    async get_paper(self, paper_id: UUID) -> Optional[Paper]:
+    async def get_paper(self, paper_id: UUID) -> Optional[Paper]:
         """Get a paper by ID."""
         try:
             result = self.supabase.table('papers').select('*').eq('id', str(paper_id)).execute()

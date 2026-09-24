@@ -43,6 +43,44 @@ app.include_router(evidence.router)
 
 
 # ---------------------------------------------------------
+# Startup Checks
+# ---------------------------------------------------------
+
+@app.on_event("startup")
+async def startup_checks():
+    from app.services.llm_factory import detect_proxy_conflict
+    from app.config import settings
+    import logging
+    log = logging.getLogger("startup")
+
+    # Check for proxy conflicts
+    proxy_check = detect_proxy_conflict()
+    if proxy_check["conflict_detected"]:
+        log.warning(
+            f"Proxy conflict detected on ports: "
+            f"{proxy_check['conflicting_ports']}. "
+            f"{proxy_check['recommendation']}"
+        )
+    else:
+        log.info("No proxy conflicts detected.")
+
+    # Test LLM connectivity
+    try:
+        from app.services.llm_factory import LLMFactory
+        client = LLMFactory.create(settings)
+        test_response = await client.complete([
+            {"role": "user", "content": "Reply with OK only."}
+        ])
+        log.info(f"LLM connection OK. Provider: {settings.llm_provider}")
+    except Exception as e:
+        log.error(
+            f"LLM connection failed at startup: {e}\n"
+            "The server will start but LLM calls will fail.\n"
+            "Check your LLM_PROVIDER and API keys in .env"
+        )
+
+
+# ---------------------------------------------------------
 # Health
 # ---------------------------------------------------------
 

@@ -676,7 +676,7 @@ Return JSON:
                         }
                     },
                     "required": ["disadvantage", "label", "evidence"]
-                ]
+                }
             },
             "limitations": {
                 "type": "array",

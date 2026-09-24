@@ -1,4 +1,4 @@
-"""Async OpenRouter client and evidence-focused prompt helpers."""
+"""Async OpenRouter client and evidence-focused prompt helpers with SSL and proxy resilience."""
 
 from __future__ import annotations
 
@@ -8,13 +8,22 @@ import logging
 import math
 import os
 import re
+import ssl
+import warnings
 from collections.abc import AsyncGenerator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+import certifi
 import httpx
+import urllib3
 
-logger = logging.getLogger(__name__)
+# Suppress only InsecureRequest warnings
+# Do NOT suppress all warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+log = logging.getLogger(__name__)
+logger = log
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/"
 DEFAULT_MODEL = "qwen/qwen3-32b:free"
@@ -50,7 +59,7 @@ def _environment_float(name: str, default: float) -> float:
 class LLMConfig:
     """Runtime configuration for the LLM provider.
 
-    The three provider settings are read from environment variables when an
+    The provider settings are read from environment variables when an
     instance is created. Optional ``LLM_*`` overrides make operational tuning
     possible without changing application code.
     """
@@ -107,7 +116,7 @@ class _OpenRouterRequestError(Exception):
 
 
 class LLMService:
-    """Asynchronous OpenRouter chat-completion client."""
+    """Asynchronous OpenRouter chat-completion client with SSL retry fallback."""
 
     def __init__(
         self,
@@ -120,10 +129,32 @@ class LLMService:
                 f"Unsupported LLM provider: {self.config.provider!r}. Only 'openrouter' is supported."
             )
 
+        # Apply proxy settings
+        no_proxy = os.getenv("NO_PROXY", "localhost,127.0.0.1,openrouter.ai,api.deepseek.com")
+        if no_proxy:
+            os.environ["NO_PROXY"] = no_proxy
+            os.environ["no_proxy"] = no_proxy
+        if not os.getenv("HTTP_PROXY"):
+            os.environ.pop("HTTP_PROXY", None)
+            os.environ.pop("http_proxy", None)
+        if not os.getenv("HTTPS_PROXY"):
+            os.environ.pop("HTTPS_PROXY", None)
+            os.environ.pop("https_proxy", None)
+
+        ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
+        ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower() in ("true", "1", "yes")
+
+        cert_target = (
+            ssl_cert_file
+            if (ssl_cert_file and os.path.exists(ssl_cert_file))
+            else certifi.where()
+        )
+        self._verify = cert_target if ssl_verify_env else False
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
             base_url=OPENROUTER_BASE_URL,
             timeout=httpx.Timeout(self.config.timeout),
+            verify=self._verify,
             headers={
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json",
@@ -212,8 +243,60 @@ class LLMService:
         )
 
     async def _sleep_before_retry(self, retry_number: int) -> None:
-        delay = 0.5 * (2**(retry_number - 1))
+        delay = 0.5 * (2 ** (retry_number - 1))
         await asyncio.sleep(delay)
+
+    async def _post_with_ssl_fallback(self, url: str, payload: dict) -> httpx.Response:
+        """Execute POST request with automatic SSL verification fallback."""
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json",
+        }
+        attempts = []
+        if self._verify:
+            attempts.append({"verify": self._verify, "label": "certifi"})
+            attempts.append({"verify": False, "label": "no-verify (fallback)"})
+        else:
+            attempts.append({"verify": False, "label": "no-verify (configured)"})
+
+        last_error = None
+        for attempt_cfg in attempts:
+            try:
+                client = httpx.AsyncClient(
+                    base_url=OPENROUTER_BASE_URL,
+                    timeout=httpx.Timeout(self.config.timeout),
+                    verify=attempt_cfg["verify"],
+                    headers=headers,
+                )
+                async with client:
+                    response = await client.post(url, json=payload)
+                    if attempt_cfg["label"] == "no-verify (fallback)":
+                        log.warning(
+                            "SSL verification failed with certifi. "
+                            "Retrying with verification disabled. "
+                            "WARNING: This is insecure. "
+                            "Fix your SSL certificates for production."
+                        )
+                    return response
+            except (httpx.ConnectError, ssl.SSLError) as exc:
+                last_error = exc
+                log.warning("OpenRouter SSL attempt '%s' failed: %s", attempt_cfg["label"], exc)
+                continue
+            except Exception as exc:
+                if "SSL" in str(exc) or "certificate" in str(exc).lower():
+                    last_error = exc
+                    log.warning("OpenRouter SSL attempt '%s' failed: %s", attempt_cfg["label"], exc)
+                    continue
+                raise
+
+        raise LLMServiceError(
+            f"All SSL attempts failed for OpenRouter request. Last error: {last_error}\n"
+            "Possible causes:\n"
+            "1. Corporate proxy/VPN intercepting requests\n"
+            "2. Zscaler or antivirus SSL inspection\n"
+            "3. Fiddler running on port 8080/8082\n"
+            "Fix: Disable proxy, or switch LLM_PROVIDER=ollama"
+        )
 
     async def complete(
         self,
@@ -229,7 +312,7 @@ class LLMService:
 
         for attempt in range(1, total_attempts + 1):
             try:
-                response = await self._client.post("chat/completions", json=payload)
+                response = await self._post_with_ssl_fallback("chat/completions", payload)
                 if response.status_code >= 400:
                     detail = self._response_detail(response)
                     retryable = response.status_code in {429, 503}
@@ -379,25 +462,61 @@ class LLMService:
         payload = self._payload(messages, temperature, max_tokens, None, stream=True)
         emitted_content = False
         total_attempts = self.config.max_retries + 1
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        verify_attempts = [self._verify, False] if self._verify else [False]
 
         for attempt in range(1, total_attempts + 1):
-            try:
-                async with self._client.stream("POST", "chat/completions", json=payload) as response:
-                    if response.status_code >= 400:
-                        await response.aread()
-                        detail = self._response_detail(response)
-                        retryable = response.status_code in {429, 503}
-                        raise _OpenRouterRequestError(
-                            f"OpenRouter stream returned HTTP {response.status_code}: {detail}",
-                            response.status_code,
-                            retryable,
-                        )
+            last_stream_err = None
+            for verify_val in verify_attempts:
+                try:
+                    async with httpx.AsyncClient(
+                        base_url=OPENROUTER_BASE_URL,
+                        timeout=httpx.Timeout(self.config.timeout),
+                        verify=verify_val,
+                        headers=headers,
+                    ) as client:
+                        async with client.stream("POST", "chat/completions", json=payload) as response:
+                            if response.status_code >= 400:
+                                await response.aread()
+                                detail = self._response_detail(response)
+                                retryable = response.status_code in {429, 503}
+                                raise _OpenRouterRequestError(
+                                    f"OpenRouter stream returned HTTP {response.status_code}: {detail}",
+                                    response.status_code,
+                                    retryable,
+                                )
 
-                    async for line in response.aiter_lines():
-                        if not line or not line.startswith("data:"):
-                            continue
-                        data = line[5:].strip()
-                        if data == "[DONE]":
+                            async for line in response.aiter_lines():
+                                if not line or not line.startswith("data:"):
+                                    continue
+                                data = line[5:].strip()
+                                if data == "[DONE]":
+                                    if emitted_content:
+                                        return
+                                    raise LLMServiceError(
+                                        "OpenRouter returned an empty stream.",
+                                        attempts=attempt,
+                                        max_retries=self.config.max_retries,
+                                    )
+                                try:
+                                    event = json.loads(data)
+                                except json.JSONDecodeError:
+                                    logger.warning("Ignoring malformed OpenRouter stream event.")
+                                    continue
+                                choices = event.get("choices") if isinstance(event, Mapping) else None
+                                if not isinstance(choices, list) or not choices:
+                                    continue
+                                first_choice = choices[0]
+                                delta = first_choice.get("delta") if isinstance(first_choice, Mapping) else None
+                                content = delta.get("content") if isinstance(delta, Mapping) else None
+                                text = self._text_from_content(content)
+                                if text:
+                                    emitted_content = True
+                                    yield text
                             if emitted_content:
                                 return
                             raise LLMServiceError(
@@ -405,65 +524,49 @@ class LLMService:
                                 attempts=attempt,
                                 max_retries=self.config.max_retries,
                             )
-                        try:
-                            event = json.loads(data)
-                        except json.JSONDecodeError:
-                            logger.warning("Ignoring malformed OpenRouter stream event.")
-                            continue
-                        choices = event.get("choices") if isinstance(event, Mapping) else None
-                        if not isinstance(choices, list) or not choices:
-                            continue
-                        first_choice = choices[0]
-                        delta = first_choice.get("delta") if isinstance(first_choice, Mapping) else None
-                        content = delta.get("content") if isinstance(delta, Mapping) else None
-                        text = self._text_from_content(content)
-                        if text:
-                            emitted_content = True
-                            yield text
-                    if emitted_content:
-                        return
-                    raise LLMServiceError(
-                        "OpenRouter returned an empty stream.",
-                        attempts=attempt,
-                        max_retries=self.config.max_retries,
+
+                except (httpx.ConnectError, ssl.SSLError) as exc:
+                    last_stream_err = exc
+                    log.warning("Stream SSL verify=%s failed: %s", verify_val, exc)
+                    continue
+                except _OpenRouterRequestError as exc:
+                    logger.warning(
+                        "OpenRouter stream attempt %s/%s failed (status=%s): %s",
+                        attempt,
+                        total_attempts,
+                        exc.status_code,
+                        exc,
                     )
+                    if emitted_content or not exc.retryable or attempt == total_attempts:
+                        raise LLMServiceError(
+                            f"OpenRouter stream failed after {attempt} attempt(s): {exc}",
+                            attempts=attempt,
+                            max_retries=self.config.max_retries,
+                            retryable=exc.retryable,
+                            status_code=exc.status_code,
+                        ) from exc
+                    await self._sleep_before_retry(attempt)
+                    break
 
-            except _OpenRouterRequestError as exc:
-                logger.warning(
-                    "OpenRouter stream attempt %s/%s failed (status=%s): %s",
-                    attempt,
-                    total_attempts,
-                    exc.status_code,
-                    exc,
-                )
-                if emitted_content or not exc.retryable or attempt == total_attempts:
+                except httpx.TimeoutException as exc:
+                    logger.warning("OpenRouter stream timed out on attempt %s/%s.", attempt, total_attempts)
+                    if emitted_content or attempt == total_attempts:
+                        raise LLMServiceError(
+                            f"OpenRouter stream timed out after {attempt} attempt(s).",
+                            attempts=attempt,
+                            max_retries=self.config.max_retries,
+                            retryable=True,
+                        ) from exc
+                    await self._sleep_before_retry(attempt)
+                    break
+
+                except httpx.HTTPError as exc:
+                    logger.exception("OpenRouter streaming client error.")
                     raise LLMServiceError(
-                        f"OpenRouter stream failed after {attempt} attempt(s): {exc}",
+                        f"OpenRouter streaming client error: {exc}",
                         attempts=attempt,
                         max_retries=self.config.max_retries,
-                        retryable=exc.retryable,
-                        status_code=exc.status_code,
                     ) from exc
-                await self._sleep_before_retry(attempt)
-
-            except httpx.TimeoutException as exc:
-                logger.warning("OpenRouter stream timed out on attempt %s/%s.", attempt, total_attempts)
-                if emitted_content or attempt == total_attempts:
-                    raise LLMServiceError(
-                        f"OpenRouter stream timed out after {attempt} attempt(s).",
-                        attempts=attempt,
-                        max_retries=self.config.max_retries,
-                        retryable=True,
-                    ) from exc
-                await self._sleep_before_retry(attempt)
-
-            except httpx.HTTPError as exc:
-                logger.exception("OpenRouter streaming client error.")
-                raise LLMServiceError(
-                    f"OpenRouter streaming client error: {exc}",
-                    attempts=attempt,
-                    max_retries=self.config.max_retries,
-                ) from exc
 
 
 class PromptBuilder:

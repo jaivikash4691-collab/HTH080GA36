@@ -8,8 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from app.models.paper import PaperAnalysis
-from app.services.analysis_service import PaperAnalysisService
+from app.services.analysis_service import PaperAnalysis, PaperAnalysisService
 from app.services.crossdoc_service import CrossDocumentAnalysisService
 
 

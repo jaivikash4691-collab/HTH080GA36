@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     verification_enabled: bool = Field(default=True, description="Enable claim verification step")
     min_claim_confidence: float = Field(default=0.7, description="Minimum confidence for claims to be considered valid", ge=0.0, le=1.0)
 
+    # SSL Settings
+    ssl_verify: bool = Field(default=True, description="Enable SSL verification")
+    ssl_cert_file: str = Field(default="", description="Path to custom CA bundle (empty to use certifi)")
+
+    # Proxy bypass
+    no_proxy: str = Field(default="localhost,127.0.0.1,openrouter.ai,api.deepseek.com", description="Bypass proxy for these hosts")
+    http_proxy: str = Field(default="", description="HTTP Proxy URL")
+    https_proxy: str = Field(default="", description="HTTPS Proxy URL")
+
     # Feature Flags
     ocr_enabled: bool = Field(default=True, description="Enable OCR for scanned PDFs")
     hybrid_search_enabled: bool = Field(default=True, description="Enable hybrid search (vector + keyword)")
@@ -56,7 +65,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_llm_provider(cls, v: str) -> str:
         """Validate LLM provider."""
-        allowed_providers = ["openrouter", "openai", "anthropic"]
+        allowed_providers = ["openrouter", "openai", "anthropic", "ollama", "deepseek"]
         if v.lower() not in allowed_providers:
             raise ValueError(f"LLM provider must be one of {allowed_providers}")
         return v.lower()
