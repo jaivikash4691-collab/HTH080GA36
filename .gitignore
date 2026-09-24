@@ -1,0 +1,51 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend-ai/.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# AI/ML models
+models/
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+
+# Uploaded files
+uploads/
+temp/
+tmp/
+
+# Generated output
+reports/
+generated_reports/
+output/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
