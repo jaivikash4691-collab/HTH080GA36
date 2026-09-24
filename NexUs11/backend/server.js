@@ -33,6 +33,15 @@ app.use(
 app.use(express.json());
 app.use(authMiddleware);
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'NEXUS Academic AI Engine',
+    message: 'Backend is running'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
