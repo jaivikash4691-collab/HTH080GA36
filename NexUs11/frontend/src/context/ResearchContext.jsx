@@ -397,7 +397,7 @@ export const ResearchProvider = ({ children }) => {
 
     // 1. Try Backend Grounded Analyzer API
     try {
-      const response = await api.post('/analyzer/ask', { query });
+      const response = await api.post('/literature/ask', { query });
       const payload = response?.data || response;
       if (payload && (payload.answer || payload.reply)) {
         const aiMsg = {
