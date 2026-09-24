@@ -51,10 +51,7 @@ export const UploadPage = ({ onStartAnalysis, onDiscover }) => {
   const processFiles = (files) => {
     if (!files || files.length === 0) return;
 
-    if (papers.length + files.length > 8) {
-      setValidationError('Maximum 8 papers allowed per literature synthesis session.');
-      return;
-    }
+    // Removed the 8 paper limit restriction as requested.
 
     const validExtensions = ['.pdf', '.doc', '.docx'];
 
@@ -123,7 +120,7 @@ export const UploadPage = ({ onStartAnalysis, onDiscover }) => {
             Upload Research Literature
           </h1>
           <p className="text-xs text-[#64748B] mt-1">
-            Stage 1 to 8 scientific papers (PDF, DOC, DOCX) for comparative multi-paper intelligence.
+            Stage scientific papers (PDF, DOC, DOCX) for comparative multi-paper intelligence.
           </p>
         </div>
 
@@ -178,7 +175,7 @@ export const UploadPage = ({ onStartAnalysis, onDiscover }) => {
               Drop research PDFs or DOCX here
             </h3>
             <p className="text-xs text-[#64748B] mt-1">
-              or browse from your local device • Up to 8 files per session
+              or browse from your local device
             </p>
           </div>
 
@@ -195,7 +192,7 @@ export const UploadPage = ({ onStartAnalysis, onDiscover }) => {
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-[#1E1B4B]" />
             <h3 className="text-sm font-bold text-[#1E1B4B]">
-              Papers Uploaded ({papers.length} / 8)
+              Papers Uploaded ({papers.length})
             </h3>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export const AuthCard = ({ onSuccess }) => {
   const {
@@ -21,6 +21,7 @@ export const AuthCard = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Password strength calculation
   const getPasswordStrength = (pass) => {
@@ -142,13 +143,20 @@ export const AuthCard = ({ onSuccess }) => {
             <div className="relative">
               <Lock className="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
+                className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E1B4B] cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -227,13 +235,20 @@ export const AuthCard = ({ onSuccess }) => {
             <div className="relative">
               <Lock className="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
+                className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E1B4B] cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
 
             {/* Password strength meter */}
@@ -266,13 +281,20 @@ export const AuthCard = ({ onSuccess }) => {
             <div className="relative">
               <Lock className="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
+                className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border border-[#CBD5E1] focus:border-[#1E1B4B] focus:ring-1 focus:ring-[#1E1B4B] outline-none transition-all placeholder:text-[#94A3B8]"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E1B4B] cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
