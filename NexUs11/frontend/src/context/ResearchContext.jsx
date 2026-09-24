@@ -516,7 +516,9 @@ export const ResearchProvider = ({ children }) => {
         feedbackList,
         submitFeedback,
         chatMessages,
+        setChatMessages,
         isAiTyping,
+        setIsAiTyping,
         askQuestion,
       }}
     >

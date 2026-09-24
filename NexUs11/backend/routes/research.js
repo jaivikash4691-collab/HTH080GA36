@@ -15,5 +15,6 @@ router.get('/experiments', researchController.getExperiments);
 router.get('/lineage', researchController.getLineage);
 router.get('/frontier', researchController.getFrontier);
 router.get('/impact', researchController.getImpact);
+router.post('/discover', researchController.discover);
 
 export default router;

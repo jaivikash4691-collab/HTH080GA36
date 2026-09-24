@@ -1,36 +1,122 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useResearch } from '../context/ResearchContext';
-import { Send, MessageSquareQuote, ShieldCheck, BookOpen, Layers } from 'lucide-react';
+import { Send, MessageSquareQuote, ShieldCheck, Search, Plus, Check, ExternalLink } from 'lucide-react';
+import api from '../services/api';
 
 export const AskPage = () => {
-  const { chatMessages, askQuestion, isAiTyping, papers } = useResearch();
+  const { chatMessages, setChatMessages, askQuestion, isAiTyping, setIsAiTyping, papers, addPaper } = useResearch();
   const [inputText, setInputText] = useState('');
   const chatBottomRef = useRef(null);
+  const [addedPapers, setAddedPapers] = useState(new Set());
+
+  const isDiscoveryMode = papers.length === 0;
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isAiTyping]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    askQuestion(inputText);
+
+    const query = inputText.trim();
     setInputText('');
+
+    const isDiscoveryIntent = isDiscoveryMode || query.toLowerCase().includes('find papers') || query.toLowerCase().includes('discover') || query.toLowerCase().includes('research ');
+
+    if (isDiscoveryIntent) {
+      handleDiscovery(query);
+    } else {
+      askQuestion(query);
+    }
+  };
+
+  const handleDiscovery = async (query) => {
+    const userMsg = {
+      id: 'msg-' + Date.now(),
+      sender: 'user',
+      text: query,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setIsAiTyping(true);
+
+    try {
+      const res = await api.post('/research/discover', { query });
+      const data = res.data || res;
+      
+      const results = data.results || [];
+      
+      if (results.length === 0) {
+        setChatMessages((prev) => [...prev, {
+            id: 'msg-' + Date.now(),
+            sender: 'ai',
+            text: "No relevant papers were found. Try a broader or more specific research question.",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      } else {
+        setChatMessages((prev) => [...prev, {
+            id: 'msg-' + Date.now(),
+            sender: 'ai',
+            text: `I found ${results.length} research papers related to your topic.`,
+            results,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+    } catch (err) {
+      setChatMessages((prev) => [...prev, {
+          id: 'msg-' + Date.now(),
+          sender: 'ai',
+          text: "Research discovery is temporarily unavailable. Please try again.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
   const handleActionClick = (query) => {
-    askQuestion(query);
+    const isDiscoveryIntent = isDiscoveryMode || query.toLowerCase().includes('find papers') || query.toLowerCase().includes('discover') || query.toLowerCase().includes('research ');
+
+    if (isDiscoveryIntent) {
+      handleDiscovery(query);
+    } else {
+      askQuestion(query);
+    }
   };
 
-  const dynamicQuickActions =
-    papers.length > 0
-      ? [
-          { label: 'Compare Methodologies', query: 'Compare the methodologies across my uploaded papers.' },
-          { label: 'Evaluation Datasets', query: 'What datasets are used across my uploaded papers?' },
-          { label: 'Documented Limitations', query: 'What are the primary limitations documented in these papers?' },
-          { label: 'Implemented Technologies', query: 'What frontend, backend, and databases are used?' },
-        ]
-      : [];
+  const handleAddPaper = async (paper) => {
+    if (addedPapers.has(paper.title)) return;
+    
+    await addPaper({
+      title: paper.title,
+      authors: paper.authors?.join(', ') || 'Unknown Authors',
+      year: paper.year,
+      filename: `${paper.title.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30)}.pdf`,
+      method: 'Empirical Research',
+      dataset: 'Discovered Dataset',
+      mainResult: paper.abstract || 'Discovered from academic search.',
+      limitation: 'To be analyzed'
+    });
+    
+    setAddedPapers(prev => new Set(prev).add(paper.title));
+  };
+
+  const dynamicQuickActions = isDiscoveryMode
+    ? [
+        { label: 'Find papers about RAG evaluation', query: 'Find papers about RAG evaluation' },
+        { label: 'Research transformer models', query: 'Research transformer models' },
+        { label: 'Find papers about AI agents', query: 'Find papers about AI agents' },
+        { label: 'Research LLM hallucinations', query: 'Research LLM hallucinations' },
+        { label: 'Explore multimodal AI research', query: 'Explore multimodal AI research' },
+      ]
+    : [
+        { label: 'Compare Methodologies', query: 'Compare the methodologies across my uploaded papers.' },
+        { label: 'Evaluation Datasets', query: 'What datasets are used across my uploaded papers?' },
+        { label: 'Documented Limitations', query: 'What are the primary limitations documented in these papers?' },
+        { label: 'Implemented Technologies', query: 'What frontend, backend, and databases are used?' },
+      ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up pb-12">
@@ -39,47 +125,71 @@ export const AskPage = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
-              Closed-Context Research Engine • Zero Hallucination
+              {isDiscoveryMode ? 'Academic Search • Research Discovery' : 'Closed-Context Research Engine • Zero Hallucination'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#1E1B4B] tracking-tight">
-            Research Chatbot & Analyzer
+            {isDiscoveryMode ? 'Research Chatbot & Discovery' : 'Research Chatbot & Analyzer'}
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Ask precise questions about your uploaded papers. Answers are strictly grounded in your documents.
+            {isDiscoveryMode 
+              ? 'Start with a research topic, question, or idea. Discover relevant academic research and build your workspace.'
+              : 'Ask precise questions about your uploaded papers. Answers are strictly grounded in your documents.'
+            }
           </p>
         </div>
 
         <div className="text-xs text-[#64748B] font-semibold bg-slate-100 px-3 py-1.5 rounded-xl">
-          {papers.length} Papers Active
+          {papers.length} {papers.length === 1 ? 'Paper Active' : 'Papers Active'}
         </div>
       </div>
 
-      {/* Zero Hallucination Closed-Context Status Banner */}
-      <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 font-black">
-            <ShieldCheck className="w-4 h-4" />
+      {/* Dynamic Status Banner */}
+      {isDiscoveryMode ? (
+        <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 font-black">
+              <Search className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold block text-[11px] uppercase tracking-wider text-slate-200">
+                RESEARCH DISCOVERY MODE
+              </span>
+              <span className="text-slate-400 text-[11px]">
+                No papers are currently in your workspace. Ask NEXUS to discover relevant academic research.
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="font-bold block text-[11px] uppercase tracking-wider text-slate-200">
-              Closed-Context Mode Active
-            </span>
-            <span className="text-slate-400 text-[11px]">
-              Answers derive exclusively from uploaded paper texts. Unsupported facts or out-of-scope queries are rejected.
-            </span>
-          </div>
+          <span className="text-[10px] font-bold text-emerald-400 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700">
+            Global Search
+          </span>
         </div>
-        <span className="text-[10px] font-bold text-emerald-400 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700">
-          Strict Research Grounding
-        </span>
-      </div>
+      ) : (
+        <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 font-black">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold block text-[11px] uppercase tracking-wider text-slate-200">
+                Closed-Context Mode Active
+              </span>
+              <span className="text-slate-400 text-[11px]">
+                Answers derive exclusively from uploaded paper texts. Unsupported facts or out-of-scope queries are rejected.
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-400 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700">
+            Strict Research Grounding
+          </span>
+        </div>
+      )}
 
       {/* Quick-Action Inquiries */}
       {dynamicQuickActions.length > 0 && (
         <div className="space-y-2">
           <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] block">
-            Suggested Research Inquiries
+            {isDiscoveryMode ? 'Suggested Research Topics' : 'Suggested Research Inquiries'}
           </span>
           <div className="flex flex-wrap gap-2">
             {dynamicQuickActions.map((action, idx) => (
@@ -104,11 +214,14 @@ export const AskPage = () => {
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-[#64748B]">
                 <MessageSquareQuote className="w-6 h-6" />
               </div>
-              <h4 className="text-sm font-bold text-[#1E1B4B]">No questions asked yet</h4>
+              <h4 className="text-sm font-bold text-[#1E1B4B]">
+                {isDiscoveryMode ? 'NEXUS Research Discovery' : 'No questions asked yet'}
+              </h4>
               <p className="text-xs text-[#64748B] max-w-sm mx-auto">
-                {papers.length > 0
-                  ? 'Ask a question about your uploaded research papers. Responses will be grounded strictly in your documents.'
-                  : 'Upload 5-8 research papers in the Upload tab to begin asking questions.'}
+                {isDiscoveryMode 
+                  ? 'Tell me what you want to research. Start with a research question, topic, technology, methodology, or problem.'
+                  : 'Ask a question about your uploaded research papers. Responses will be grounded strictly in your documents.'
+                }
               </p>
             </div>
           ) : (
@@ -134,7 +247,7 @@ export const AskPage = () => {
                           <div className="w-6 h-6 rounded-lg bg-[#1E1B4B] text-white flex items-center justify-center font-black text-xs">
                             N
                           </div>
-                          <span className="text-xs font-bold text-[#1E1B4B]">NEXUS Research Analyzer</span>
+                          <span className="text-xs font-bold text-[#1E1B4B]">NEXUS Research {isDiscoveryMode ? 'Discovery' : 'Analyzer'}</span>
                         </div>
                         <span className="text-[10px] text-[#64748B] font-semibold">{msg.timestamp}</span>
                       </div>
@@ -142,6 +255,54 @@ export const AskPage = () => {
                       <div className="text-xs text-[#0F172A] leading-relaxed whitespace-pre-wrap font-medium">
                         {msg.text}
                       </div>
+
+                      {/* Paper Cards for Discovery Results */}
+                      {msg.results && msg.results.length > 0 && (
+                        <div className="space-y-3 mt-3">
+                          {msg.results.map((paper, idx) => (
+                            <div key={idx} className="bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-xs space-y-2 relative">
+                              <h5 className="text-xs font-bold text-[#1E1B4B] pr-4">{paper.title}</h5>
+                              <p className="text-[10px] text-[#64748B] font-medium">
+                                {(paper.authors || []).join(' · ')} {paper.authors?.length > 0 && '· '} 
+                                {paper.year}
+                                {paper.source && ` · ${paper.source}`}
+                              </p>
+                              {paper.abstract && (
+                                <p className="text-[10px] text-[#334155] leading-relaxed line-clamp-3">
+                                  {paper.abstract}
+                                </p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-2 pt-2">
+                                {paper.url && (
+                                  <a
+                                    href={paper.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-[#E2E8F0] text-[#1E1B4B] hover:bg-slate-50 transition-colors"
+                                  >
+                                    Open Paper <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => handleAddPaper(paper)}
+                                  disabled={addedPapers.has(paper.title)}
+                                  className={`flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    addedPapers.has(paper.title)
+                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                      : 'bg-[#1E1B4B] text-white hover:bg-[#1E1B4B]/90'
+                                  }`}
+                                >
+                                  {addedPapers.has(paper.title) ? (
+                                    <>Added to Workspace <Check className="w-3 h-3" /></>
+                                  ) : (
+                                    <>Add to Workspace <Plus className="w-3 h-3" /></>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Paper Citations (Strict Source Attribution) */}
                       {msg.citations && msg.citations.length > 0 && (
@@ -171,7 +332,7 @@ export const AskPage = () => {
           {isAiTyping && (
             <div className="flex items-center gap-2 text-xs text-[#64748B] p-3 bg-slate-50 rounded-xl max-w-xs animate-pulse">
               <span className="w-2 h-2 rounded-full bg-[#1E1B4B] animate-ping" />
-              <span>Analyzing uploaded research papers...</span>
+              <span>{isDiscoveryMode ? 'Searching academic literature...' : 'Analyzing uploaded research papers...'}</span>
             </div>
           )}
 
@@ -185,17 +346,16 @@ export const AskPage = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder={
-              papers.length > 0
-                ? "Ask a question about your uploaded research papers (e.g., 'What methodology does Paper 1 use?')..."
-                : 'Please upload research papers to begin querying...'
+              isDiscoveryMode
+                ? "Ask about a research topic or discover academic papers..."
+                : "Ask a question about your uploaded research papers (e.g., 'What methodology does Paper 1 use?')..."
             }
-            disabled={papers.length === 0}
-            className="flex-1 px-4 py-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-xs focus:outline-none focus:border-[#1E1B4B] focus:bg-white transition-all disabled:opacity-50 text-[#0F172A]"
+            className="flex-1 px-4 py-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-xs focus:outline-none focus:border-[#1E1B4B] focus:bg-white transition-all text-[#0F172A]"
           />
 
           <button
             type="submit"
-            disabled={!inputText.trim() || papers.length === 0}
+            disabled={!inputText.trim()}
             className="p-3 rounded-xl bg-[#1E1B4B] text-white hover:bg-[#1E1B4B]/90 transition-all shadow-xs disabled:opacity-50 cursor-pointer shrink-0"
           >
             <Send className="w-4 h-4" />

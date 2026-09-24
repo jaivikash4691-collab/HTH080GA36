@@ -133,6 +133,59 @@ export const researchController = {
       next(err);
     }
   },
+
+  async discover(req, res, next) {
+    try {
+      const { query } = req.body;
+      if (!query) {
+        return res.status(400).json({ success: false, message: 'Query is required' });
+      }
+
+      // Fetch from OpenAlex
+      const response = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=10`, {
+        headers: {
+          'User-Agent': 'NEXUS-Research-Bot/1.0 (mailto:nexus-bot@example.com)' // Polite pool
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAlex returned ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      const results = (data.results || []).map(paper => {
+        // Reconstruct abstract from inverted index
+        let abstract = null;
+        if (paper.abstract_inverted_index) {
+          const positions = [];
+          for (const [word, indices] of Object.entries(paper.abstract_inverted_index)) {
+            for (const idx of indices) {
+              positions[idx] = word;
+            }
+          }
+          abstract = positions.filter(Boolean).join(' ');
+        }
+
+        return {
+          title: paper.title,
+          authors: (paper.authorships || []).map(a => a.author && a.author.display_name).filter(Boolean),
+          year: paper.publication_year,
+          abstract: abstract,
+          url: paper.doi || paper.id, // Prefer DOI, fallback to OpenAlex ID
+          pdfUrl: paper.open_access?.is_oa && paper.open_access?.oa_url ? paper.open_access.oa_url : null,
+          doi: paper.doi,
+          source: paper.primary_location?.source?.display_name || 'OpenAlex'
+        };
+      });
+
+      res.json({ query, results });
+    } catch (err) {
+      console.error('[Research Discovery]', err);
+      res.status(500).json({ success: false, message: `Research discovery failed: ${err.message}` });
+    }
+  }
 };
 
 export default researchController;
