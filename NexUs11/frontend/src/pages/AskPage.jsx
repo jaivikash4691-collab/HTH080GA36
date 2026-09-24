@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useResearch } from '../context/ResearchContext';
-import { Send, MessageSquareQuote, ShieldCheck, Search, Plus, Check, ExternalLink } from 'lucide-react';
+import { Send, MessageSquareQuote, ShieldCheck, Search, Plus, Check, ExternalLink, BookOpen } from 'lucide-react';
 import api from '../services/api';
 
 export const AskPage = () => {
@@ -8,8 +8,10 @@ export const AskPage = () => {
   const [inputText, setInputText] = useState('');
   const chatBottomRef = useRef(null);
   const [addedPapers, setAddedPapers] = useState(new Set());
+  const [explicitMode, setExplicitMode] = useState(null);
 
-  const isDiscoveryMode = papers.length === 0;
+  const activeMode = explicitMode || (papers.length === 0 ? 'discovery' : 'analysis');
+  const isDiscoveryMode = activeMode === 'discovery';
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -22,9 +24,7 @@ export const AskPage = () => {
     const query = inputText.trim();
     setInputText('');
 
-    const isDiscoveryIntent = isDiscoveryMode || query.toLowerCase().includes('find papers') || query.toLowerCase().includes('discover') || query.toLowerCase().includes('research ');
-
-    if (isDiscoveryIntent) {
+    if (isDiscoveryMode) {
       handleDiscovery(query);
     } else {
       askQuestion(query);
@@ -77,9 +77,7 @@ export const AskPage = () => {
   };
 
   const handleActionClick = (query) => {
-    const isDiscoveryIntent = isDiscoveryMode || query.toLowerCase().includes('find papers') || query.toLowerCase().includes('discover') || query.toLowerCase().includes('research ');
-
-    if (isDiscoveryIntent) {
+    if (isDiscoveryMode) {
       handleDiscovery(query);
     } else {
       askQuestion(query);
@@ -139,8 +137,36 @@ export const AskPage = () => {
           </p>
         </div>
 
-        <div className="text-xs text-[#64748B] font-semibold bg-slate-100 px-3 py-1.5 rounded-xl">
-          {papers.length} {papers.length === 1 ? 'Paper Active' : 'Papers Active'}
+        <div className="flex flex-col items-end gap-3">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setExplicitMode('discovery')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                isDiscoveryMode 
+                  ? 'bg-white text-[#1E1B4B] shadow-sm' 
+                  : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5" />
+              Discover Research
+            </button>
+            <button
+              onClick={() => setExplicitMode('analysis')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                !isDiscoveryMode 
+                  ? 'bg-white text-[#1E1B4B] shadow-sm' 
+                  : 'text-[#64748B] hover:text-[#1E1B4B] cursor-pointer'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Analyze My Papers
+            </button>
+          </div>
+
+          <div className="text-xs text-[#64748B] font-semibold bg-slate-100 px-3 py-1.5 rounded-xl">
+            {papers.length} {papers.length === 1 ? 'Paper Active' : 'Papers Active'}
+          </div>
         </div>
       </div>
 
