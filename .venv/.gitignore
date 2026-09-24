@@ -1,0 +1,129 @@
+```gitignore
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# =========================
+# Virtual Environments
+# =========================
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# API keys / credentials
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# =========================
+# IDE / Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Testing / Coverage
+# =========================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# =========================
+# Uploaded Research Files
+# =========================
+uploads/
+temp/
+tmp/
+
+# PDF / document processing cache
+*.pdf.tmp
+*.docx.tmp
+
+# =========================
+# ML / Model Cache
+# =========================
+.cache/
+.cache/
+huggingface_cache/
+models/
+*.safetensors
+*.bin
+*.onnx
+
+# =========================
+# Generated Reports
+# =========================
+reports/
+generated_reports/
+output/
+
+# =========================
+# Database / Local Data
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Node / Frontend
+# =========================
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+
+# =========================
+# Local deployment files
+# =========================
+.Docker/
+docker-compose.override.yml
+
+# =========================
+# Miscellaneous
+# =========================
+*.pid
+*.pid.lock
+```
