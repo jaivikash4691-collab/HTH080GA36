@@ -1,0 +1,39 @@
+{
+  "users": {
+    "kmkdjnfj@vgdeh": {
+      "id": "7f64c349-8162-41c8-8a7e-74cd354b7a1c",
+      "email": "kmkdjnfj@vgdeh",
+      "name": "laks",
+      "password": "abcdef",
+      "createdAt": "2026-09-24T18:04:53.544Z"
+    }
+  },
+  "papers": {
+    "7f64c349-8162-41c8-8a7e-74cd354b7a1c": [
+      {
+        "id": "paper_1483616yf",
+        "user_id": "7f64c349-8162-41c8-8a7e-74cd354b7a1c",
+        "code": "P1",
+        "filename": "sample.pdf",
+        "title": "sample",
+        "authors": "Investigator et al.",
+        "publication_year": 2026,
+        "pages": 12,
+        "status": "Ready",
+        "methodology": "Empirical Methodology",
+        "dataset": "Evaluated Benchmark",
+        "sample_size": "N/A",
+        "evaluation_metric": "Accuracy • Precision",
+        "main_result": "Document indexed for literature intelligence synthesis.",
+        "limitations": "Awaiting multi-paper comparative verification.",
+        "research_problem": null,
+        "potential_research_direction": null,
+        "created_at": "2026-09-24T18:05:48.840Z"
+      }
+    ]
+  },
+  "sessions": {},
+  "findings": {},
+  "gaps": {},
+  "directions": {}
+}

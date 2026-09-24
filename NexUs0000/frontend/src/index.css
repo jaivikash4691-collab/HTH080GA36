@@ -1,0 +1,283 @@
+@import "tailwindcss";
+
+:root {
+  /* NEXUS Research Intelligence Palette */
+  --bg-warm-white: #FBF9F5;
+  --bg-linen: #F3EFEA;
+  --bg-pure: #FFFFFF;
+  --bg-chalk: #F8FAFC;
+  
+  --accent-indigo: #1E1B4B;
+  --accent-cobalt: #2563EB;
+  --accent-indigo-tint: #4F46E5;
+  --accent-teal: #0D9488;
+  --accent-jade: #15803D;
+  --accent-crimson: #E11D48;
+  --accent-amber: #D97706;
+  
+  --text-midnight: #0F172A;
+  --text-indigo: #1E1B4B;
+  --text-slate: #64748B;
+  --border-cool-mist: #E2E8F0;
+  --disabled-fog: #CBD5E1;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+  background-color: var(--bg-warm-white);
+  color: var(--text-indigo);
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg-warm-white: #0B0F19;
+  --bg-linen: #0F172A;
+  --bg-pure: #1E293B;
+  --bg-chalk: #0F172A;
+  
+  --text-midnight: #F8FAFC;
+  --text-indigo: #F1F5F9;
+  --text-slate: #94A3B8;
+  --border-cool-mist: #334155;
+  --disabled-fog: #475569;
+
+  background-color: #0B0F19;
+  color: #F8FAFC;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #FBF9F5;
+  color: #1E1B4B;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+  background-color: #0B0F19 !important;
+  color: #F8FAFC !important;
+}
+
+/* Dark Mode Universal Polish */
+html.dark .glass-card,
+html.dark .nexus-hover-card {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .nexus-hover-card:hover {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.5), 0 0 18px -2px rgba(13, 148, 136, 0.25) !important;
+}
+
+/* Base surface overrides in dark mode */
+html.dark .bg-white {
+  background-color: #1E293B !important;
+}
+
+html.dark .bg-\[\#FBF9F5\],
+html.dark .bg-\[\#F8FAFC\] {
+  background-color: #0B0F19 !important;
+}
+
+html.dark .bg-\[\#F3EFEA\],
+html.dark .bg-slate-50 {
+  background-color: #0F172A !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1E293B !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #334155 !important;
+}
+
+/* Borders in dark mode */
+html.dark .border-\[\#E2E8F0\],
+html.dark .border-slate-200,
+html.dark .border-slate-100 {
+  border-color: #334155 !important;
+}
+
+/* Primary text in dark mode */
+html.dark .text-\[\#1E1B4B\],
+html.dark .text-\[\#0F172A\],
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #F8FAFC !important;
+}
+
+/* Secondary / muted text in dark mode */
+html.dark .text-\[\#64748B\],
+html.dark .text-slate-500,
+html.dark .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+/* Form inputs in dark mode */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748B !important;
+}
+
+/* Modals / Drawers / Overlays in dark mode */
+html.dark .bg-white\/80,
+html.dark .bg-white\/90,
+html.dark .bg-white\/95 {
+  background-color: rgba(30, 41, 59, 0.95) !important;
+}
+
+/* Table styling in dark mode */
+html.dark tr.hover\:bg-slate-50:hover,
+html.dark tr:hover {
+  background-color: #0F172A !important;
+}
+
+html.dark th {
+  background-color: #0F172A !important;
+  color: #94A3B8 !important;
+  border-color: #334155 !important;
+}
+
+html.dark td {
+  border-color: #334155 !important;
+}
+
+/* Custom Scrollbar in dark mode */
+html.dark ::-webkit-scrollbar-track {
+  background: #0B0F19;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glass Card and Soft Surfaces */
+.glass-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Section 37: Unique NEXUS Card Hover Effect */
+.nexus-hover-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.nexus-hover-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(30, 27, 75, 0.28);
+  box-shadow: 0 14px 32px -4px rgba(30, 27, 75, 0.08), 0 0 18px -2px rgba(13, 148, 136, 0.14);
+}
+
+/* Micro-animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gentle Floating Animation (Section 3) */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: gentleFloat 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlowTeal {
+  0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.45); }
+  70% { box-shadow: 0 0 0 14px rgba(13, 148, 136, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+}
+
+.glow-teal-pulse {
+  animation: pulseGlowTeal 2.2s infinite ease-out;
+}
+
+@keyframes pulseGlowCrimson {
+  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+.glow-crimson-pulse {
+  animation: pulseGlowCrimson 2s infinite ease-out;
+}
+
+@keyframes shimmerEffect {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-progress {
+  background: linear-gradient(90deg, #1E1B4B 0%, #2563EB 50%, #1E1B4B 100%);
+  background-size: 200% 100%;
+  animation: shimmerEffect 1.8s infinite linear;
+}
+
+@keyframes shakeAnimation {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shakeAnimation 360ms ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FBF9F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
