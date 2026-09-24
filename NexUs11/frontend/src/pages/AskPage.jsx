@@ -49,10 +49,49 @@ export const AskPage = () => {
     setIsAiTyping(true);
 
     try {
-      const res = await api.post('/research/discover', { query });
-      const data = res.data || res;
+      const url = `https://api.crossref.org/v1/works?query.bibliographic=${encodeURIComponent(query)}&rows=8&mailto=nexus-bot@example.com`;
+      const res = await fetch(url);
       
-      const results = data.results || [];
+      if (!res.ok) {
+        throw new Error(`Crossref returned ${res.status}`);
+      }
+      
+      const data = await res.json();
+      const items = data?.message?.items || [];
+      
+      const results = items.map(item => {
+        const authors = (item.author || []).map(a => {
+          if (a.given && a.family) return `${a.given} ${a.family}`;
+          if (a.family) return a.family;
+          return a.name || 'Unknown Author';
+        }).filter(Boolean);
+
+        let year = null;
+        if (item.issued && item.issued['date-parts'] && item.issued['date-parts'][0] && item.issued['date-parts'][0][0]) {
+          year = item.issued['date-parts'][0][0];
+        } else if (item.created && item.created['date-parts'] && item.created['date-parts'][0] && item.created['date-parts'][0][0]) {
+          year = item.created['date-parts'][0][0];
+        }
+
+        let abstract = "";
+        if (item.abstract) {
+          abstract = item.abstract.replace(/<[^>]*>?/gm, '').trim();
+        }
+
+        const doi = item.DOI || null;
+        const resultUrl = item.URL || (doi ? `https://doi.org/${doi}` : null);
+        const title = (item.title && item.title.length > 0) ? item.title[0] : 'Untitled Document';
+
+        return {
+          title,
+          authors,
+          year,
+          abstract,
+          url: resultUrl,
+          doi,
+          source: 'Crossref'
+        };
+      });
       
       if (results.length === 0) {
         setChatMessages((prev) => [...prev, {
@@ -71,10 +110,11 @@ export const AskPage = () => {
         }]);
       }
     } catch (err) {
+      console.error('[Research Discovery Error]', err);
       setChatMessages((prev) => [...prev, {
           id: 'msg-' + Date.now(),
           sender: 'ai',
-          text: "Research discovery is temporarily unavailable. Please try again.",
+          text: `An error occurred while communicating with the research database (${err.message}). Please try again later.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
     } finally {
