@@ -38,13 +38,27 @@ export const authService = {
     // 1. If Supabase is connected, authenticate via Supabase Auth
     if (supabase) {
       try {
-        const { data, error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: { full_name: userFullName.trim() },
-          },
-        });
+        let data, error;
+        if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          const res = await supabase.auth.admin.createUser({
+            email: normalizedEmail,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: userFullName.trim() },
+          });
+          data = res.data;
+          error = res.error;
+        } else {
+          const res = await supabase.auth.signUp({
+            email: normalizedEmail,
+            password,
+            options: {
+              data: { full_name: userFullName.trim() },
+            },
+          });
+          data = res.data;
+          error = res.error;
+        }
 
         if (error) {
           if (
