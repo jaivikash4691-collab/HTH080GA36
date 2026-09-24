@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+:root {
+  /* NEXUS Research Intelligence Palette */
+  --bg-warm-white: #FBF9F5;
+  --bg-linen: #F3EFEA;
+  --bg-pure: #FFFFFF;
+  --bg-chalk: #F8FAFC;
+  
+  --accent-indigo: #1E1B4B;
+  --accent-cobalt: #2563EB;
+  --accent-indigo-tint: #4F46E5;
+  --accent-teal: #0D9488;
+  --accent-jade: #15803D;
+  --accent-crimson: #E11D48;
+  --accent-amber: #D97706;
+  
+  --text-midnight: #0F172A;
+  --text-indigo: #1E1B4B;
+  --text-slate: #64748B;
+  --border-cool-mist: #E2E8F0;
+  --disabled-fog: #CBD5E1;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+  background-color: var(--bg-warm-white);
+  color: var(--text-indigo);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #FBF9F5;
+  color: #1E1B4B;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glass Card and Soft Surfaces */
+.glass-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Section 37: Unique NEXUS Card Hover Effect */
+.nexus-hover-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.04);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.nexus-hover-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(30, 27, 75, 0.28);
+  box-shadow: 0 14px 32px -4px rgba(30, 27, 75, 0.08), 0 0 18px -2px rgba(13, 148, 136, 0.14);
+}
+
+/* Micro-animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gentle Floating Animation (Section 3) */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: gentleFloat 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlowTeal {
+  0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.45); }
+  70% { box-shadow: 0 0 0 14px rgba(13, 148, 136, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+}
+
+.glow-teal-pulse {
+  animation: pulseGlowTeal 2.2s infinite ease-out;
+}
+
+@keyframes pulseGlowCrimson {
+  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+.glow-crimson-pulse {
+  animation: pulseGlowCrimson 2s infinite ease-out;
+}
+
+@keyframes shimmerEffect {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-progress {
+  background: linear-gradient(90deg, #1E1B4B 0%, #2563EB 50%, #1E1B4B 100%);
+  background-size: 200% 100%;
+  animation: shimmerEffect 1.8s infinite linear;
+}
+
+@keyframes shakeAnimation {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shakeAnimation 360ms ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FBF9F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}

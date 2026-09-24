@@ -1,0 +1,15 @@
+-- =============================================================================
+-- NEXUS AI - Seed Data
+-- =============================================================================
+-- INTENTIONALLY EMPTY.
+--
+-- No demo users.
+-- No sample papers.
+-- No fake conversations.
+-- No fake findings.
+-- No fake gaps.
+-- No fake research directions.
+-- No fake feedback.
+--
+-- All application data must be created by real authenticated users.
+-- =============================================================================
