@@ -48,59 +48,40 @@ export const UploadPage = ({ onStartAnalysis, onDiscover }) => {
     }
   };
 
-  const processFiles = (files) => {
+  const processFiles = async (files) => {
     if (!files || files.length === 0) return;
 
-    // Removed the 8 paper limit restriction as requested.
+    const validExtensions = ['.pdf', '.doc', '.docx', '.txt', '.pptx', '.ppt'];
 
-    const validExtensions = ['.pdf', '.doc', '.docx'];
-
-    files.forEach((file) => {
+    for (const file of files) {
       const lower = file.name.toLowerCase();
       const hasValidExt = validExtensions.some((ext) => lower.endsWith(ext));
 
       if (!hasValidExt) {
-        setValidationError('Invalid format: Only PDF, DOC, and DOCX research documents are supported.');
-        return;
+        setValidationError('Invalid format: Only PDF, DOC, DOCX, PPT, PPTX, and TXT research documents are supported.');
+        continue;
       }
 
-      if (file.size > 25 * 1024 * 1024) {
-        setValidationError(`Oversized file: "${file.name}" exceeds the 25MB maximum size limit.`);
-        return;
+      if (file.size > 30 * 1024 * 1024) {
+        setValidationError(`Oversized file: "${file.name}" exceeds the 30MB maximum size limit.`);
+        continue;
       }
 
       // Duplicate check
       const isDuplicate = papers.some(
-        (p) => p.filename.toLowerCase() === file.name.toLowerCase()
+        (p) => p.filename && p.filename.toLowerCase() === file.name.toLowerCase()
       );
       if (isDuplicate) {
         setValidationError(`Duplicate paper warning: "${file.name}" is already staged.`);
-        return;
+        continue;
       }
 
-      const nextId = papers.length + 1;
-      const ext = lower.endsWith('.docx') ? 'docx' : lower.endsWith('.doc') ? 'doc' : 'pdf';
-      const cleanTitle = file.name.replace(/\.(pdf|docx|doc)/i, '').replace(/_/g, ' ');
-
-      const newP = {
-        id: 'paper_' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5),
-        code: `P${nextId}`,
-        filename: file.name,
-        title: cleanTitle,
-        authors: 'Investigator et al.',
-        year: new Date().getFullYear(),
-        pages: 12,
-        fileFormat: ext,
-        status: 'Ready',
-        extractionStatus: '100% OCR Indexed',
-        method: 'Empirical Methodology',
-        dataset: 'Evaluated Benchmark',
-        mainResult: 'Document indexed for literature intelligence synthesis.',
-        limitation: 'Awaiting multi-paper comparative verification.',
-      };
-
-      addPaper(newP);
-    });
+      try {
+        await addPaper(file);
+      } catch (err) {
+        setValidationError(err.message || `Failed to extract text from "${file.name}".`);
+      }
+    }
   };
 
   const canAnalyze = papers.length >= 1;

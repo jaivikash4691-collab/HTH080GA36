@@ -5,9 +5,13 @@ async function request(endpoint, options = {}) {
   const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   
   const headers = {
-    'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
+
+  // Only add Content-Type: application/json if body is not FormData
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   // Attach token if present in localStorage
   const token = localStorage.getItem('nexus_token');
@@ -44,10 +48,22 @@ async function request(endpoint, options = {}) {
 
 export const api = {
   get: (endpoint, options = {}) => request(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, body, options = {}) =>
-    request(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-  put: (endpoint, body, options = {}) =>
-    request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  post: (endpoint, body, options = {}) => {
+    const isFormData = body instanceof FormData;
+    return request(endpoint, {
+      ...options,
+      method: 'POST',
+      body: isFormData ? body : JSON.stringify(body),
+    });
+  },
+  put: (endpoint, body, options = {}) => {
+    const isFormData = body instanceof FormData;
+    return request(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: isFormData ? body : JSON.stringify(body),
+    });
+  },
   delete: (endpoint, options = {}) => request(endpoint, { ...options, method: 'DELETE' }),
 };
 

@@ -1,52 +1,41 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const LLM_PROVIDER = process.env.LLM_PROVIDER || 'gemini';
-const LLM_MODEL = process.env.LLM_MODEL || 'gemini-1.5-flash';
-const LLM_API_KEY = process.env.LLM_API_KEY || process.env.GEMINI_API_KEY || '';
-const LLM_BASE_URL = process.env.LLM_BASE_URL || '';
+const LLM_PROVIDER = (process.env.LLM_PROVIDER || '').toLowerCase();
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY || '';
+const NVIDIA_NIM_API_KEY = process.env.NVIDIA_NIM_API_KEY || '';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
-export const STRICT_RESEARCH_SYSTEM_PROMPT = `You are NEXUS Research Analyzer.
+const LLM_MODEL = process.env.LLM_MODEL || (NVIDIA_NIM_API_KEY ? 'moonshotai/kimi-k3' : 'gemini-1.5-flash');
 
-Your task is to analyze uploaded research papers.
+export const STRICT_RESEARCH_SYSTEM_PROMPT = `You are a research-paper analysis assistant.
 
-You must answer using ONLY information contained in the supplied research-paper context.
+You must analyze uploaded research papers using ONLY the provided document content.
 
-Do not use your pretrained knowledge to fill missing information.
+Do not invent a completely different research topic.
+Do not use generic/default content.
+If information is missing from the document, explicitly state that it was not found.
 
-Do not invent facts.
-Do not invent results.
-Do not invent statistics.
-Do not invent algorithms.
-Do not invent technologies.
-Do not invent datasets.
-Do not invent research gaps.
-Do not invent citations.
-
-If the information is not present in the supplied research-paper context, explicitly state:
-"The uploaded research papers do not provide sufficient information to answer this question."
-
-Distinguish clearly between:
-1. Information explicitly stated in the papers.
-2. Cross-paper analysis.
-3. AI-derived interpretation.
-4. Suggested research directions.
-
-Never present a suggestion as an established fact.
-
-Remain relevant to the user's question. If the user asks about a specific paper or technology, answer only that question without dumping unrelated summaries.
-
-Do not answer questions outside the uploaded research papers. If the question is unrelated, state:
-"This question is outside the scope of the uploaded research papers. I can answer questions related to the papers in this project."`;
+Follow the user's task strictly and ground every assertion in the provided document excerpts.`;
 
 export const geminiService = {
   isConfigured() {
     return Boolean(
-      LLM_API_KEY &&
-        !LLM_API_KEY.includes('mock') &&
-        !LLM_API_KEY.includes('unconfigured') &&
-        LLM_API_KEY.length > 10
+      (GEMINI_API_KEY && !GEMINI_API_KEY.includes('mock') && GEMINI_API_KEY.length > 10) ||
+      (NVIDIA_NIM_API_KEY && NVIDIA_NIM_API_KEY.length > 10) ||
+      (OPENROUTER_API_KEY && OPENROUTER_API_KEY.length > 10) ||
+      (OPENAI_API_KEY && OPENAI_API_KEY.length > 10)
     );
+  },
+
+  getActiveProvider() {
+    if (LLM_PROVIDER) return LLM_PROVIDER;
+    if (GEMINI_API_KEY && !GEMINI_API_KEY.includes('mock')) return 'gemini';
+    if (NVIDIA_NIM_API_KEY) return 'nvidia_nim';
+    if (OPENROUTER_API_KEY) return 'openrouter';
+    if (OPENAI_API_KEY) return 'openai';
+    return 'unconfigured';
   },
 
   async generateText(prompt, systemInstruction = STRICT_RESEARCH_SYSTEM_PROMPT, options = {}) {
@@ -58,45 +47,79 @@ export const geminiService = {
       };
     }
 
+    const provider = this.getActiveProvider();
     const temperature = options.temperature ?? 0.1;
 
     try {
-      const url =
-        LLM_BASE_URL ||
-        `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${LLM_API_KEY}`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
+      if (provider === 'gemini') {
+        const model = options.model || LLM_MODEL || 'gemini-1.5-flash';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            generationConfig: {
+              temperature,
+              maxOutputTokens: options.maxTokens || 4096,
+              ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
             },
+          }),
+        });
+
+        const data = await response.json();
+        const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return {
+          text: generatedText.trim(),
+          model,
+          isConfigured: true,
+        };
+      }
+
+      // OpenAI / NVIDIA NIM / OpenRouter Chat Completion format
+      let endpoint = 'https://api.openai.com/v1/chat/completions';
+      let apiKey = OPENAI_API_KEY;
+      let model = options.model || LLM_MODEL || 'gpt-4o-mini';
+
+      if (provider === 'nvidia_nim') {
+        endpoint = process.env.NVIDIA_NIM_BASE_URL || 'https://integrate.api.nvidia.com/v1/chat/completions';
+        apiKey = NVIDIA_NIM_API_KEY;
+        model = options.model || process.env.LLM_MODEL || 'moonshotai/kimi-k3';
+      } else if (provider === 'openrouter') {
+        endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+        apiKey = OPENROUTER_API_KEY;
+        model = options.model || process.env.LLM_MODEL || 'google/gemini-2.0-flash-001';
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: prompt },
           ],
-          systemInstruction: {
-            parts: [{ text: systemInstruction || STRICT_RESEARCH_SYSTEM_PROMPT }],
-          },
-          generationConfig: {
-            temperature: temperature,
-            topK: 1,
-            topP: 0.1,
-            maxOutputTokens: options.maxTokens || 4096,
-            ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
-          },
+          temperature,
+          max_tokens: options.maxTokens || 4096,
+          ...(options.responseFormat ? { response_format: options.responseFormat } : {}),
         }),
       });
 
       const data = await response.json();
-      const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
+      const generatedText = data?.choices?.[0]?.message?.content || '';
       return {
         text: generatedText.trim(),
-        model: LLM_MODEL,
+        model,
         isConfigured: true,
       };
     } catch (err) {
-      console.warn('[LLM Service] Generation failed:', err.message);
+      console.warn(`[LLM Service] Generation error with ${provider}:`, err.message);
       return {
         text: null,
         model: LLM_MODEL,
@@ -110,12 +133,18 @@ export const geminiService = {
     const result = await this.generateText(prompt, systemInstruction, {
       temperature: 0.0,
       responseMimeType: 'application/json',
+      responseFormat: { type: 'json_object' },
     });
 
     if (!result.text) return null;
 
     try {
-      const cleanJson = result.text.replace(/```json/g, '').replace(/```/g, '').trim();
+      let cleanJson = result.text.trim();
+      if (cleanJson.startsWith('```json')) {
+        cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+      } else if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+      }
       return JSON.parse(cleanJson);
     } catch (e) {
       console.warn('[LLM Service] Failed to parse JSON response:', e.message);

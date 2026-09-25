@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
-  const { topic, papers, findings, contradictions, gaps, strategy } = useResearch();
+  const { topic, papers } = useResearch();
   const [reportData, setReportData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -52,6 +52,42 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
     (papers[0]?.title ? papers[0].title.replace(/\.(pdf|docx?|txt)$/i, '') : 'Full Stack Research Intelligence');
 
   const papersAnalyzedCount = reportData?.structured_analysis?.papersCount || papers.length || 5;
+
+  const structured = reportData?.structured_analysis;
+  const analysisPapers = structured?.papers || papers;
+  const commonFindings = structured?.commonFindings || [
+    {
+      title: `Empirical Verification of ${effectiveTopic}`,
+      statement: `Across reviewed studies, authors validated their proposed architectures using domain-specific empirical measurements.`,
+    },
+  ];
+  const contradictions = structured?.contradictions || [];
+  const researchGaps = structured?.researchGaps || [
+    {
+      title: `Scalability and Cross-Domain Generalization in ${effectiveTopic}`,
+      description: `Wider cross-system validation across varied operating environments remains unverified.`,
+    },
+  ];
+  const researchQuestions = structured?.researchQuestions || [
+    `How can the proposed methodologies in ${effectiveTopic} be unified to enhance operational robustness?`,
+  ];
+  const researchDirections = structured?.researchDirections || [
+    {
+      category: 'Design & Architecture Optimization',
+      suggestion: `Develop a modular, scalable framework for ${effectiveTopic} that optimizes operational durability.`,
+    },
+  ];
+  const researchStrategy = structured?.researchStrategy || {
+    problem: `Overcoming scalability trade-offs and operational constraints in ${effectiveTopic}.`,
+    gap: researchGaps[0]?.title || `Cross-Domain Validation in ${effectiveTopic}`,
+    researchQuestion: researchQuestions[0] || `How to optimize ${effectiveTopic}?`,
+    proposedApproach: `Integrated experimental methodology combining empirical design and multi-metric validation.`,
+    dataset: (Array.isArray(analysisPapers[0]?.datasets) ? analysisPapers[0]?.datasets[0] : analysisPapers[0]?.dataset) || `Empirical Evaluation Setup`,
+    evaluation: `Multi-metric empirical evaluation covering throughput, error rates, and efficiency.`,
+  };
+  const observedTech = analysisPapers[0]?.technologies
+    ? (Array.isArray(analysisPapers[0].technologies) ? analysisPapers[0].technologies.join(', ') : analysisPapers[0].technologies)
+    : 'Domain-Specific Architecture';
 
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
@@ -151,83 +187,83 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
       const sectionsToPrint = [
         {
           title: 'ABSTRACT',
-          body: `This report presents a structured cross-paper synthesis of ${papersAnalyzedCount} peer-reviewed research publications focusing on ${effectiveTopic}. Through grounded comparative analysis, we map the landscape of empirical methodologies, software stacks, algorithmic models, reported advantages, and critical limitations without hallucination. We identify common findings across papers, detect contextual variations, validate research gaps, and propose a 12-month research strategy and architecture blueprint.`,
+          body: `This report presents a structured cross-paper synthesis of ${papersAnalyzedCount} peer-reviewed research publications focusing on ${effectiveTopic}. Through grounded comparative analysis, we map the landscape of empirical methodologies, implementations, reported advantages, and critical limitations without hallucination. We identify common findings across papers, detect contextual variations, validate research gaps, and propose a research strategy and architecture blueprint.`,
         },
         {
           title: '1. INTRODUCTION',
-          body: `Recent advancements in ${effectiveTopic} have spurred diverse technical paradigms, ranging from algorithmic optimizations to modern decoupled architectures. This analysis synthesizes empirical outcomes across ${papersAnalyzedCount} ingested studies to establish a rigorous baseline, clarify architectural trade-offs, and define open research questions.`,
+          body: `Recent advancements in ${effectiveTopic} have spurred diverse technical paradigms. This analysis synthesizes empirical outcomes across ${papersAnalyzedCount} ingested studies to establish a rigorous baseline, clarify architectural trade-offs, and define open research questions in ${effectiveTopic}.`,
         },
         {
           title: '2. RESEARCH PAPERS ANALYZED',
-          body: papers.map((p, i) => `• [${p.code || `P${i+1}`}] ${p.title} (${p.year || 2025}). Method: ${p.method || 'Empirical Architecture'}. Dataset: ${p.dataset || 'Evaluation Benchmark'}.`).join('\n'),
+          body: analysisPapers.map((p, i) => `• [${p.code || `P${i+1}`}] ${p.title} (${p.year || p.publication_year || 2025}). Method: ${Array.isArray(p.methodology) ? p.methodology.join(', ') : p.method || 'Empirical Architecture'}. Dataset: ${Array.isArray(p.datasets) ? p.datasets.join(', ') : p.dataset || 'Evaluation Benchmark'}.`).join('\n'),
         },
         {
           title: '3. RESEARCH PROBLEM',
-          body: `The collective problem across the literature centers on achieving high accuracy, scalable throughput, and robust domain generalization in ${effectiveTopic}.`,
+          body: analysisPapers[0]?.problem || `The collective problem across the literature centers on achieving high accuracy, scalable throughput, and robust domain generalization in ${effectiveTopic}.`,
         },
         {
           title: '4. RESEARCH OBJECTIVES',
-          body: `1. Grounded extraction of individual paper methodologies and findings.\n2. Cross-paper comparison across technology stacks and architectures.\n3. Detection of common findings, contextual variations, and research gaps.\n4. Formulation of a testable research strategy for subsequent development.`,
+          body: `1. Grounded extraction of individual paper methodologies and findings in ${effectiveTopic}.\n2. Cross-paper comparison across technology stacks and architectures.\n3. Detection of common findings, contextual variations, and research gaps.\n4. Formulation of a testable research strategy for subsequent development.`,
         },
         {
           title: '5. PAPER-BY-PAPER ANALYSIS',
-          body: papers.map((p, i) => `Paper ${p.code || `P${i+1}`}: "${p.title}"\n- Objective: Investigate ${p.title}\n- Methodology: ${p.method || 'Standard Empirical'}\n- Results: ${p.mainResult || 'Verified evidence stream'}\n- Limitations: ${p.limitation || 'The paper does not explicitly state limitations.'}`).join('\n\n'),
+          body: analysisPapers.map((p, i) => `Paper ${p.code || `P${i+1}`}: "${p.title}"\n- Research Topic: ${p.research_topic || effectiveTopic}\n- Problem: ${p.problem || `Challenges in ${p.title}`}\n- Objective: ${p.objective || `Investigate ${p.title}`}\n- Methodology: ${Array.isArray(p.methodology) ? p.methodology.join(', ') : p.method || 'Empirical Method'}\n- Results: ${Array.isArray(p.results) ? p.results.join(' ') : p.mainResult || 'Verified evidence stream'}\n- Limitations: ${Array.isArray(p.limitations) ? p.limitations.join(' ') : p.limitation || 'The paper does not explicitly state limitations.'}`).join('\n\n'),
         },
         {
           title: '6. WHAT EACH PAPER IMPLEMENTED',
-          body: papers.map((p, i) => `• ${p.code || `P${i+1}`}: Implemented a ${p.method || 'System'} framework tested on ${p.dataset || 'Dataset'}. Outcome: ${p.mainResult || 'Document results indexed.'}`).join('\n'),
+          body: analysisPapers.map((p, i) => `• ${p.code || `P${i+1}`}: Implemented ${Array.isArray(p.technologies) ? p.technologies.join(', ') : 'architecture'} evaluated on ${Array.isArray(p.datasets) ? p.datasets.join(', ') : p.dataset || 'Dataset'}. Outcome: ${Array.isArray(p.results) ? p.results[0] : p.mainResult || 'Document results indexed.'}`).join('\n'),
         },
         {
           title: '7. METHODOLOGY COMPARISON',
-          body: `The reviewed papers utilize structured empirical workflows comparing baseline metrics against proposed algorithmic and architectural configurations.`,
+          body: `The reviewed papers utilize structured empirical workflows in ${effectiveTopic} comparing baseline metrics against proposed configurations.`,
         },
         {
           title: '8. TECHNOLOGY COMPARISON',
-          body: `Frontend: React / TypeScript • Backend: Node.js / FastAPI • Database: PostgreSQL with pgvector, MongoDB • ML Models: PyTorch, Transformer / DNN architectures.`,
+          body: `Domain Technologies in ${effectiveTopic}: ${observedTech}. Evaluation Benchmark: ${researchStrategy.dataset}.`,
         },
         {
           title: '9. IMPLEMENTATION COMPARISON',
-          body: `Studies demonstrate a transition from monolithic computational pipelines toward decoupled, asynchronous microservices for higher concurrency and lower query latency.`,
+          body: `Implementations vary in complexity and operational constraints. Authors demonstrate modular workflows facilitating reproducible evaluation and domain validation in ${effectiveTopic}.`,
         },
         {
           title: '10. COMMON FINDINGS',
-          body: `• Empirical Validation: All reviewed papers validate their proposed methods on structured benchmark datasets.\n• Algorithmic Focus: High priority is placed on accuracy and precision metrics across primary cohorts.`,
+          body: commonFindings.map(c => `• ${c.title}: ${c.statement}`).join('\n'),
         },
         {
           title: '11. DIFFERENCES AND CONTRADICTIONS',
-          body: `Observed performance variations across papers stem from differences in evaluation datasets, metric definitions, and baseline model configurations rather than direct logical contradictions.`,
+          body: contradictions.length > 0 ? contradictions.map(c => `• ${c.topic}: ${c.findingA} vs ${c.findingB} (${c.possibleReason})`).join('\n') : 'No direct empirical contradictions detected; variations reflect differing test setups.',
         },
         {
           title: '12. ADVANTAGES',
-          body: `• Validated performance improvements on designated evaluation benchmarks.\n• Modular architectural designs facilitating localized scalability.\n• Clear documentation of core computational components.`,
+          body: `• Validated performance improvements on designated evaluation benchmarks in ${effectiveTopic}.\n• Modular designs facilitating localized optimization.\n• Explicit implementation details documented for core computational components.`,
         },
         {
           title: '13. LIMITATIONS',
-          body: `• Evaluations are predominantly conducted on restricted or curated datasets.\n• Limited runtime latency and memory profiling for edge deployment.\n• Cross-domain generalization remains subject to performance degradation.`,
+          body: `• Evaluations are predominantly conducted on specific benchmark setups.\n• Operational resource constraints under extreme environments.\n• Cross-domain adaptation subject to performance variations.`,
         },
         {
           title: '14. RESEARCH GAPS',
-          body: `1. Cross-dataset generalization under real-world domain shifts.\n2. Hardware-in-the-loop latency profiling for real-time edge execution.`,
+          body: researchGaps.map(g => `• ${g.title}: ${g.description}`).join('\n'),
         },
         {
           title: '15. RESEARCH QUESTIONS',
-          body: `1. How does the proposed system perform when evaluated on larger, multi-source external datasets?\n2. What are the empirical trade-offs between inference speed and accuracy under high concurrent loads?`,
+          body: researchQuestions.map((q, i) => `${i+1}. ${q}`).join('\n'),
         },
         {
           title: '16. SUGGESTED RESEARCH DIRECTIONS',
-          body: `• Architecture: Investigate decoupled caching layers to minimize query latency.\n• Evaluation: Construct a unified open benchmark for cross-paper comparison.\n• Usability: Design interactive visualization interfaces for real-time model interpretability.`,
+          body: researchDirections.map(d => `• ${d.category}: ${d.suggestion}`).join('\n'),
         },
         {
           title: '17. PROPOSED RESEARCH STRATEGY',
-          body: `Problem: Empirical fragmentation in ${effectiveTopic}.\nTarget Gap: Cross-dataset generalization.\nApproach: Modular hybrid framework with automated metric logging.\nEvaluation: Multi-metric benchmark covering accuracy, F1, and response latency.`,
+          body: `Problem: ${researchStrategy.problem}\nTarget Gap: ${researchStrategy.gap}\nApproach: ${researchStrategy.proposedApproach}\nEvaluation: ${researchStrategy.evaluation}`,
         },
         {
           title: '18. POTENTIAL TECHNOLOGY STACK',
-          body: `• Frontend: React 18, Tailwind CSS, Lucide Icons\n• Backend: Node.js / Express, Python FastAPI\n• Storage: PostgreSQL with pgvector\n• AI/RAG: Pretrained LLM + Embeddings + Reranking`,
+          body: `• Domain Stack: ${observedTech}\n• Evaluation Suite: ${researchStrategy.dataset}\n• Simulation & Analysis Tools: Domain Verification Pipeline`,
         },
         {
           title: '19. EXPECTED CONTRIBUTION',
-          body: `A reproducible, benchmarked architecture resolving cross-study discrepancies and providing a verified blueprint for future research.`,
+          body: `A reproducible, benchmarked architecture resolving cross-study discrepancies and providing a verified blueprint for future research in ${effectiveTopic}.`,
         },
         {
           title: '20. CONCLUSION',
@@ -423,22 +459,22 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             5. PAPER-BY-PAPER ANALYSIS
           </h2>
           <div className="space-y-4">
-            {papers.map((p, idx) => (
-              <div key={p.id || idx} className="p-4 rounded-xl border border-[#E2E8F0] bg-[#FAFAFA] space-y-2 text-xs">
+            {analysisPapers.map((p, idx) => (
+              <div key={p.id || p.paper_id || idx} className="p-4 rounded-xl border border-[#E2E8F0] bg-[#FAFAFA] space-y-2 text-xs">
                 <div className="font-bold text-sm text-[#1E1B4B]">
                   {p.code || `P${idx + 1}`}: {p.title}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[#475569]">
-                  <div><strong>Research Problem:</strong> Methodological and evaluation constraints in {p.title}.</div>
-                  <div><strong>Objective:</strong> Investigate performance of {p.method || 'proposed architecture'}.</div>
-                  <div><strong>Methodology:</strong> {p.method || 'Standard empirical method'}</div>
-                  <div><strong>Dataset:</strong> {p.dataset || 'Validation benchmark'}</div>
+                  <div><strong>Research Topic:</strong> {p.research_topic || effectiveTopic}</div>
+                  <div><strong>Research Problem:</strong> {p.problem || `Challenges in ${p.title}`}</div>
+                  <div><strong>Methodology:</strong> {Array.isArray(p.methodology) ? p.methodology.join(', ') : p.method || 'Empirical Architecture'}</div>
+                  <div><strong>Dataset / Setup:</strong> {Array.isArray(p.datasets) ? p.datasets.join(', ') : p.dataset || 'Validation benchmark'}</div>
                 </div>
                 <div className="pt-1 text-[#334155]">
-                  <strong>Key Results:</strong> {p.mainResult || 'Extracted and verified outcome stream.'}
+                  <strong>Key Results:</strong> {Array.isArray(p.results) ? p.results.join(' ') : p.mainResult || 'Extracted and verified outcome stream.'}
                 </div>
                 <div className="text-[#64748B]">
-                  <strong>Reported Limitations:</strong> {p.limitation || 'The paper does not explicitly state limitations.'}
+                  <strong>Reported Limitations:</strong> {Array.isArray(p.limitations) ? p.limitations.join(' ') : p.limitation || 'The paper does not explicitly state limitations.'}
                 </div>
               </div>
             ))}
@@ -451,9 +487,9 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             6. WHAT EACH PAPER IMPLEMENTED
           </h2>
           <div className="space-y-2 text-xs sm:text-sm text-[#334155]">
-            {papers.map((p, idx) => (
-              <div key={p.id || idx} className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
-                <strong className="text-[#1E1B4B]">{p.code || `P${idx + 1}`} ({p.title}):</strong> Implemented a {p.method || 'System'} framework tested on {p.dataset || 'Dataset'}. Reported result: {p.mainResult || 'Document results analyzed.'}
+            {analysisPapers.map((p, idx) => (
+              <div key={p.id || p.paper_id || idx} className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                <strong className="text-[#1E1B4B]">{p.code || `P${idx + 1}`} ({p.title}):</strong> Implemented {Array.isArray(p.technologies) ? p.technologies.join(', ') : 'architecture'} evaluated on {Array.isArray(p.datasets) ? p.datasets.join(', ') : p.dataset || 'Dataset'}. Reported result: {Array.isArray(p.results) ? p.results[0] : p.mainResult || 'Document results analyzed.'}
               </div>
             ))}
           </div>
@@ -465,12 +501,8 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             7. METHODOLOGY COMPARISON
           </h2>
           <p className="text-xs sm:text-sm text-[#334155] leading-relaxed">
-            The reviewed literature reveals two primary methodological branches:
+            The reviewed literature in <strong>{effectiveTopic}</strong> reveals structured empirical workflows comparing baseline measurements against proposed configurations.
           </p>
-          <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-[#334155]">
-            <li><strong>Model-Centric Empirical Approaches:</strong> Focused on algorithmic improvements and loss convergence.</li>
-            <li><strong>System-Oriented Pipelines:</strong> Focused on end-to-end data throughput, modularity, and reproducible pipeline integration.</li>
-          </ul>
         </section>
 
         {/* 8. TECHNOLOGY COMPARISON */}
@@ -483,29 +515,21 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
               <thead>
                 <tr className="bg-[#1E1B4B] text-white">
                   <th className="p-2.5 font-bold rounded-tl-lg">Dimension</th>
-                  <th className="p-2.5 font-bold rounded-tr-lg">Observed Technology Stack</th>
+                  <th className="p-2.5 font-bold rounded-tr-lg">Observed Technology Stack in {effectiveTopic}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-[#F8FAFC]">
                 <tr>
-                  <td className="p-2.5 font-bold text-[#1E1B4B]">Programming Languages</td>
-                  <td className="p-2.5 text-[#334155]">Python, JavaScript / TypeScript, Java</td>
+                  <td className="p-2.5 font-bold text-[#1E1B4B]">Domain Implementation Stack</td>
+                  <td className="p-2.5 text-[#334155]">{observedTech}</td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 font-bold text-[#1E1B4B]">Frontend Frameworks</td>
-                  <td className="p-2.5 text-[#334155]">React, Angular, Component UI Libraries</td>
+                  <td className="p-2.5 font-bold text-[#1E1B4B]">Evaluation & Test Setup</td>
+                  <td className="p-2.5 text-[#334155]">{researchStrategy.dataset}</td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 font-bold text-[#1E1B4B]">Backend & Runtime</td>
-                  <td className="p-2.5 text-[#334155]">Node.js (Express), Python (FastAPI)</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 font-bold text-[#1E1B4B]">Databases & Vector Stores</td>
-                  <td className="p-2.5 text-[#334155]">PostgreSQL (pgvector), MongoDB</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 font-bold text-[#1E1B4B]">Machine Learning / AI</td>
-                  <td className="p-2.5 text-[#334155]">PyTorch, Transformers, Deep Neural Networks</td>
+                  <td className="p-2.5 font-bold text-[#1E1B4B]">Modeling & Simulation Tools</td>
+                  <td className="p-2.5 text-[#334155]">Domain Simulation & Verification Framework</td>
                 </tr>
               </tbody>
             </table>
@@ -518,7 +542,7 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             9. IMPLEMENTATION COMPARISON
           </h2>
           <p className="text-xs sm:text-sm text-[#334155] leading-relaxed">
-            Implementations vary in computational intensity and runtime requirements. While earlier baseline methods rely on monolithic architectures, recent contributions favor decoupled modular microservices that facilitate parallel processing and localized scaling.
+            Implementations vary in computational intensity and operational requirements. Authors demonstrate modular workflows that facilitate reproducible evaluation and domain validation in {effectiveTopic}.
           </p>
         </section>
 
@@ -528,14 +552,12 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             10. COMMON FINDINGS
           </h2>
           <div className="space-y-2 text-xs sm:text-sm text-[#334155]">
-            <div className="p-3 bg-[#0D9488]/5 border border-[#0D9488]/20 rounded-xl">
-              <strong className="text-[#0D9488] block">Cross-Paper Consensus 1: Empirical Evaluation Validation</strong>
-              All {papersAnalyzedCount} reviewed papers implement empirical evaluation pipelines on structured domain datasets to validate their proposed techniques.
-            </div>
-            <div className="p-3 bg-[#0D9488]/5 border border-[#0D9488]/20 rounded-xl">
-              <strong className="text-[#0D9488] block">Cross-Paper Consensus 2: Algorithmic Optimization Focus</strong>
-              The majority of reviewed papers prioritize accuracy and precision metrics over real-time edge runtime constraints.
-            </div>
+            {commonFindings.map((c, idx) => (
+              <div key={idx} className="p-3 bg-[#0D9488]/5 border border-[#0D9488]/20 rounded-xl">
+                <strong className="text-[#0D9488] block">{c.title}</strong>
+                {c.statement}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -544,9 +566,20 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
           <h2 className="text-base font-black text-[#1E1B4B] border-b border-[#E2E8F0] pb-2">
             11. DIFFERENCES AND CONTRADICTIONS
           </h2>
-          <p className="text-xs sm:text-sm text-[#334155] leading-relaxed">
-            No direct empirical contradictions were detected across the reviewed documents; variations reflect differing dataset domains, evaluation parameters, and baseline architectures rather than conflicting findings.
-          </p>
+          <div className="space-y-2 text-xs sm:text-sm text-[#334155]">
+            {contradictions.length > 0 ? (
+              contradictions.map((c, idx) => (
+                <div key={idx} className="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+                  <strong className="text-[#1E1B4B] block">{c.topic}</strong>
+                  <div>• Finding A: {c.findingA}</div>
+                  <div>• Finding B: {c.findingB}</div>
+                  <div className="text-[#64748B] text-[11px] mt-1">Context: {c.possibleReason}</div>
+                </div>
+              ))
+            ) : (
+              <p className="text-[#334155]">No direct empirical contradictions detected; variations reflect differing test setups and parameter conditions.</p>
+            )}
+          </div>
         </section>
 
         {/* 12. ADVANTAGES */}
@@ -555,9 +588,9 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             12. ADVANTAGES
           </h2>
           <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-[#334155]">
-            <li><strong>Validated Precision:</strong> Authors report statistically significant performance improvements on target benchmarks.</li>
-            <li><strong>Architectural Efficiency:</strong> Modular pipeline designs show reduced processing overhead for specialized sub-tasks.</li>
-            <li><strong>Reproducibility Focus:</strong> Recent studies provide explicit implementation details for core computational modules.</li>
+            <li><strong>Validated Precision:</strong> Authors report statistically verified improvements on target benchmarks in {effectiveTopic}.</li>
+            <li><strong>Architectural Efficiency:</strong> Modular designs show reduced overhead for specialized sub-tasks.</li>
+            <li><strong>Reproducibility Focus:</strong> Explicit implementation details documented for core computational components.</li>
           </ul>
         </section>
 
@@ -567,9 +600,9 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             13. LIMITATIONS
           </h2>
           <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-[#334155]">
-            <li><strong>Restricted Evaluation Cohorts:</strong> Evaluations are predominantly restricted to curated or synthetic benchmarks.</li>
-            <li><strong>Edge Resource Constraints:</strong> Limited empirical profiling regarding memory footprint, battery consumption, or edge device execution.</li>
-            <li><strong>Domain Adaptation:</strong> The reviewed literature acknowledges performance degradation when encountering external domain shift.</li>
+            <li><strong>Restricted Evaluation Cohorts:</strong> Evaluations are predominantly conducted on specific benchmark setups.</li>
+            <li><strong>Operational Constraints:</strong> Limited empirical profiling under extreme or edge operational environments.</li>
+            <li><strong>Domain Adaptation:</strong> Performance degradation when encountering external domain shift.</li>
           </ul>
         </section>
 
@@ -579,14 +612,12 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             14. RESEARCH GAPS
           </h2>
           <div className="space-y-2 text-xs sm:text-sm text-[#334155]">
-            <div className="p-3 bg-[#E11D48]/5 border border-[#E11D48]/20 rounded-xl">
-              <strong className="text-[#E11D48] block">Research Gap 1: Cross-Dataset Generalizability</strong>
-              The reviewed papers evaluate their approaches primarily on isolated datasets. Standardized evaluation across heterogeneous multi-source datasets remains missing.
-            </div>
-            <div className="p-3 bg-[#E11D48]/5 border border-[#E11D48]/20 rounded-xl">
-              <strong className="text-[#E11D48] block">Research Gap 2: Real-Time Latency & Edge Constraints</strong>
-              Limited empirical profiling exists regarding end-to-end inference latency under high-concurrency production deployments.
-            </div>
+            {researchGaps.map((g, idx) => (
+              <div key={idx} className="p-3 bg-[#E11D48]/5 border border-[#E11D48]/20 rounded-xl">
+                <strong className="text-[#E11D48] block">{g.title}</strong>
+                {g.description}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -596,9 +627,9 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             15. RESEARCH QUESTIONS
           </h2>
           <ol className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-[#334155]">
-            <li>How does the proposed approach perform when evaluated across larger, diverse multi-institutional datasets?</li>
-            <li>Can response time and computational overhead be reduced by introducing a hybrid decoupled architecture?</li>
-            <li>What are the empirical trade-offs between accuracy and latency under high-concurrency production workloads?</li>
+            {researchQuestions.map((q, idx) => (
+              <li key={idx}>{q}</li>
+            ))}
           </ol>
         </section>
 
@@ -608,14 +639,12 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             16. SUGGESTED RESEARCH DIRECTIONS
           </h2>
           <div className="space-y-2 text-xs sm:text-sm text-[#334155]">
-            <div className="p-3 bg-[#2563EB]/5 border border-[#2563EB]/20 rounded-xl">
-              <strong className="text-[#2563EB] block">Suggested Direction 1: Architecture & Scalability</strong>
-              Investigate a modular, decoupled architecture to balance throughput and inference efficiency, addressing latency bottlenecks.
-            </div>
-            <div className="p-3 bg-[#2563EB]/5 border border-[#2563EB]/20 rounded-xl">
-              <strong className="text-[#2563EB] block">Suggested Direction 2: Benchmark Harmonization</strong>
-              Construct a unified open-access benchmark to evaluate cross-paper methodologies under identical workloads.
-            </div>
+            {researchDirections.map((d, idx) => (
+              <div key={idx} className="p-3 bg-[#2563EB]/5 border border-[#2563EB]/20 rounded-xl">
+                <strong className="text-[#2563EB] block">{d.category}</strong>
+                {d.suggestion}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -625,11 +654,12 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             17. PROPOSED RESEARCH STRATEGY
           </h2>
           <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] space-y-2 text-xs text-[#334155]">
-            <div><strong>Research Problem:</strong> Empirical fragmentation in {effectiveTopic}.</div>
-            <div><strong>Target Research Gap:</strong> Cross-dataset generalizability and edge latency.</div>
-            <div><strong>Primary Question:</strong> How can cross-paper methodologies be unified under a scalable architecture?</div>
-            <div><strong>Proposed Approach:</strong> Hybrid modular framework with automated metric logging.</div>
-            <div><strong>Evaluation Framework:</strong> Multi-metric evaluation (Accuracy, F1, Latency, Memory Footprint).</div>
+            <div><strong>Research Problem:</strong> {researchStrategy.problem}</div>
+            <div><strong>Target Research Gap:</strong> {researchStrategy.gap}</div>
+            <div><strong>Primary Question:</strong> {researchStrategy.researchQuestion}</div>
+            <div><strong>Proposed Approach:</strong> {researchStrategy.proposedApproach}</div>
+            <div><strong>Target Dataset:</strong> {researchStrategy.dataset}</div>
+            <div><strong>Evaluation Framework:</strong> {researchStrategy.evaluation}</div>
           </div>
         </section>
 
@@ -639,9 +669,9 @@ export const AnalyzedPaperPage = ({ onBack, onNavigate }) => {
             18. POTENTIAL TECHNOLOGY STACK
           </h2>
           <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-[#334155]">
-            <li>Frontend: Modern React / TypeScript interface with real-time state management.</li>
-            <li>Backend: High-concurrency Node.js / Python async service layer.</li>
-            <li>Database: PostgreSQL with pgvector for relational integrity and vector retrieval.</li>
+            <li>Domain Implementation Stack: {observedTech}</li>
+            <li>Evaluation & Testing Framework: {researchStrategy.dataset}</li>
+            <li>Automated Verification & Logging Suite</li>
           </ul>
         </section>
 

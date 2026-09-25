@@ -196,8 +196,13 @@ export const ResearchProvider = ({ children }) => {
     setAnalysisStatus('analyzing');
     setActiveAnalysisStep(0);
 
-    // Trigger backend analysis in background
-    api.post('/analyzer/analyze', { mode: 'cross-paper-synthesis' }).catch(() => {});
+    // Trigger backend analysis
+    try {
+      const res = await api.post('/analyzer/analyze', { mode: 'cross-paper-synthesis' });
+      if (res?.structuredAnalysis?.topic) {
+        setTopic(res.structuredAnalysis.topic);
+      }
+    } catch {}
 
     const stepInterval = setInterval(() => {
       setActiveAnalysisStep((prev) => {
@@ -237,67 +242,91 @@ export const ResearchProvider = ({ children }) => {
   };
 
   // Add Paper (User-Specific)
-  const addPaper = async (newPaper) => {
-    const code = `P${papers.length + 1}`;
-    const paperWithMeta = {
-      id: newPaper.id || 'paper_' + Date.now(),
-      code,
-      title: newPaper.title || newPaper.filename.replace(/\.(pdf|docx?|txt)$/i, '').replace(/_/g, ' '),
-      filename: newPaper.filename,
-      authors: newPaper.authors || 'Research Author et al.',
-      year: newPaper.year || new Date().getFullYear(),
-      pages: newPaper.pages || 1,
-      status: 'Ready',
-      method: newPaper.method || 'Empirical Architecture',
-      dataset: newPaper.dataset || 'Validation Benchmark',
-      mainResult: newPaper.mainResult || 'Extracted and verified evidence stream.',
-      limitation: newPaper.limitation || 'Domain shift and sample constraints.',
-      citationsCount: 0,
-    };
+  const addPaper = async (paperOrFile) => {
+    let paperWithMeta;
 
-    setPapers((prev) => [...prev, paperWithMeta]);
+    if (typeof File !== 'undefined' && paperOrFile instanceof File) {
+      const formData = new FormData();
+      formData.append('file', paperOrFile);
+      const res = await api.post('/papers/upload', formData);
+      const p = res.paper;
+      if (!p) {
+        throw new Error(res.message || res.error || 'Upload extraction failed.');
+      }
+      paperWithMeta = {
+        id: p.id,
+        code: p.code,
+        title: p.title,
+        filename: p.filename,
+        authors: p.authors || 'Research Author et al.',
+        year: p.publication_year || p.year || new Date().getFullYear(),
+        pages: p.pages || 1,
+        status: p.status || 'Ready',
+        method: p.methodology || p.method || 'Empirical Architecture',
+        dataset: p.dataset || 'Validation Benchmark',
+        mainResult: p.main_result || p.mainResult || 'Extracted and verified evidence stream.',
+        limitation: p.limitations || p.limitation || 'Domain shift and sample constraints.',
+        citationsCount: 0,
+      };
+    } else {
+      const newPaper = paperOrFile;
+      const code = `P${papers.length + 1}`;
+      paperWithMeta = {
+        id: newPaper.id || 'paper_' + Date.now(),
+        code: newPaper.code || code,
+        title: newPaper.title || newPaper.filename?.replace(/\.(pdf|docx?|txt)$/i, '').replace(/_/g, ' ') || 'Research Document',
+        filename: newPaper.filename,
+        authors: newPaper.authors || 'Research Author et al.',
+        year: newPaper.year || new Date().getFullYear(),
+        pages: newPaper.pages || 1,
+        status: 'Ready',
+        method: newPaper.method || 'Empirical Architecture',
+        dataset: newPaper.dataset || 'Validation Benchmark',
+        mainResult: newPaper.mainResult || 'Extracted and verified evidence stream.',
+        limitation: newPaper.limitation || 'Domain shift and sample constraints.',
+        citationsCount: 0,
+      };
 
-    if (!topic) {
+      try {
+        const res = await api.post('/papers/upload', {
+          id: paperWithMeta.id,
+          code: paperWithMeta.code,
+          title: paperWithMeta.title,
+          filename: paperWithMeta.filename,
+          authors: paperWithMeta.authors,
+          publicationYear: paperWithMeta.year,
+          pages: paperWithMeta.pages,
+          methodology: paperWithMeta.method,
+          dataset: paperWithMeta.dataset,
+          mainResult: paperWithMeta.mainResult,
+          limitations: paperWithMeta.limitation,
+        });
+        if (res?.paper) {
+          paperWithMeta = {
+            ...paperWithMeta,
+            id: res.paper.id,
+            code: res.paper.code,
+            title: res.paper.title,
+            method: res.paper.methodology || paperWithMeta.method,
+            dataset: res.paper.dataset || paperWithMeta.dataset,
+            mainResult: res.paper.main_result || paperWithMeta.mainResult,
+            limitation: res.paper.limitations || paperWithMeta.limitation,
+          };
+        }
+      } catch {}
+    }
+
+    setPapers((prev) => {
+      const exists = prev.some(p => p.id === paperWithMeta.id || p.filename === paperWithMeta.filename);
+      if (exists) return prev;
+      return [...prev, paperWithMeta];
+    });
+
+    if (!topic || topic === 'Research Intelligence Synthesis') {
       setTopic(paperWithMeta.title);
     }
 
-    // Call Backend API
-    try {
-      await api.post('/papers/upload', {
-        id: paperWithMeta.id,
-        code: paperWithMeta.code,
-        title: paperWithMeta.title,
-        filename: paperWithMeta.filename,
-        authors: paperWithMeta.authors,
-        publicationYear: paperWithMeta.year,
-        pages: paperWithMeta.pages,
-        methodology: paperWithMeta.method,
-        dataset: paperWithMeta.dataset,
-        mainResult: paperWithMeta.mainResult,
-        limitations: paperWithMeta.limitation,
-      });
-    } catch {}
-
-    // Direct Supabase insert
-    if (isSupabaseConfigured && userId) {
-      try {
-        await supabase.from('uploaded_papers').insert([
-          {
-            id: paperWithMeta.id,
-            user_id: userId,
-            code: paperWithMeta.code,
-            filename: paperWithMeta.filename,
-            title: paperWithMeta.title,
-            authors: paperWithMeta.authors,
-            publication_year: paperWithMeta.year,
-            pages: paperWithMeta.pages,
-            methodology: paperWithMeta.method,
-            dataset: paperWithMeta.dataset,
-            status: 'Ready',
-          },
-        ]);
-      } catch {}
-    }
+    return paperWithMeta;
   };
 
   // Remove Paper (User-Specific)

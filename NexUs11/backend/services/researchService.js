@@ -11,8 +11,13 @@ export const researchService = {
       return { findings: [] };
     }
 
-    const cached = deepAnalysisService.getCache(userId);
-    if (cached?.commonFindings) {
+    let cached = deepAnalysisService.getCache(userId);
+    if (!cached) {
+      const res = await deepAnalysisService.runFullAnalysis(userId, papers);
+      cached = res.structuredAnalysis;
+    }
+
+    if (cached?.commonFindings && cached.commonFindings.length > 0) {
       return {
         findings: cached.commonFindings.map((cf, idx) => ({
           id: cf.id || `F${idx + 1}`,
@@ -26,12 +31,11 @@ export const researchService = {
       };
     }
 
-    // Dynamic synthesis based on user's real papers
     const findings = papers.map((p, idx) => ({
       id: `F${idx + 1}`,
       user_id: userId,
       title: `Synthesis: ${p.title}`,
-      statement: `Empirical validation conducted in ${p.title} using ${p.methodology || 'documented methodology'}.`,
+      statement: `Empirical findings in ${p.title}: ${p.main_result || p.methodology || 'Document analyzed.'}`,
       supportedRatio: `${papers.length} / ${papers.length} papers`,
       coveragePercent: 100,
       supportingPaperIds: [p.code || `P${idx + 1}`],
@@ -48,8 +52,13 @@ export const researchService = {
       return { gaps: [], radar: [] };
     }
 
-    const cached = deepAnalysisService.getCache(userId);
-    if (cached?.researchGaps) {
+    let cached = deepAnalysisService.getCache(userId);
+    if (!cached) {
+      const res = await deepAnalysisService.runFullAnalysis(userId, papers);
+      cached = res.structuredAnalysis;
+    }
+
+    if (cached?.researchGaps && cached.researchGaps.length > 0) {
       const formattedGaps = cached.researchGaps.map((g) => ({
         id: g.id,
         user_id: userId,
@@ -69,15 +78,7 @@ export const researchService = {
         user_id: userId,
         category: 'Methodological Blindspot',
         title: `Cross-dataset validation on ${papers[0]?.title || 'uploaded literature'}`,
-        description: `Comparative analysis of uploaded papers highlights need for external cohort benchmarking.`,
-        paperCodes: papers.map((p, i) => p.code || `P${i + 1}`),
-      },
-      {
-        id: `gap_${userId}_2`,
-        user_id: userId,
-        category: 'Evaluation Gap',
-        title: `Deployment latency & compute constraints`,
-        description: `Standardized evaluation metrics for real-time inference across edge devices are unverified.`,
+        description: `Analysis across uploaded papers indicates need for external prospective verification.`,
         paperCodes: papers.map((p, i) => p.code || `P${i + 1}`),
       },
     ];
@@ -93,8 +94,13 @@ export const researchService = {
       return { directions: [] };
     }
 
-    const cached = deepAnalysisService.getCache(userId);
-    if (cached?.researchDirections) {
+    let cached = deepAnalysisService.getCache(userId);
+    if (!cached) {
+      const res = await deepAnalysisService.runFullAnalysis(userId, papers);
+      cached = res.structuredAnalysis;
+    }
+
+    if (cached?.researchDirections && cached.researchDirections.length > 0) {
       return {
         directions: cached.researchDirections.map((d, i) => ({
           id: `dir_${userId}_${i + 1}`,
@@ -112,8 +118,8 @@ export const researchService = {
         {
           id: `dir_${userId}_1`,
           user_id: userId,
-          proposedTitle: `Unified Evaluation Framework for ${papers[0]?.title || 'Research Cohort'}`,
-          researchQuestion: `How can cross-paper methodologies from ${papers.map((p, i) => p.code || `P${i + 1}`).join(' and ')} be harmonized?`,
+          proposedTitle: `Unified Evaluation Framework for ${papers[0]?.title || 'Research Literature'}`,
+          researchQuestion: `How can methodologies from ${papers.map((p, i) => p.code || `P${i + 1}`).join(' and ')} be harmonized?`,
           suggestedMethodology: 'Multi-center comparative benchmark',
           opportunityType: 'Methodological Extension',
         },
@@ -145,7 +151,12 @@ export const researchService = {
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length < 2) return { contradictions: [], hunterItems: [] };
 
-    const cached = deepAnalysisService.getCache(userId);
+    let cached = deepAnalysisService.getCache(userId);
+    if (!cached) {
+      const res = await deepAnalysisService.runFullAnalysis(userId, papers);
+      cached = res.structuredAnalysis;
+    }
+
     if (cached?.contradictions) {
       return {
         contradictions: cached.contradictions,
@@ -164,9 +175,9 @@ export const researchService = {
     const { papers } = await paperService.getPapers(userId);
     if (!papers || papers.length === 0) return { timeline: [] };
 
-    const sorted = [...papers].sort((a, b) => (a.year || 2024) - (b.year || 2024));
+    const sorted = [...papers].sort((a, b) => (a.publication_year || a.year || 2024) - (b.publication_year || b.year || 2024));
     const timeline = sorted.map((p, idx) => ({
-      year: p.year || (2020 + idx),
+      year: p.publication_year || p.year || (2020 + idx),
       title: p.title,
       code: p.code || `P${idx + 1}`,
       methodology: p.methodology || 'Methodology',
@@ -189,7 +200,7 @@ export const researchService = {
           paperB: papers[1].code || 'P2',
           titleA: papers[0].title,
           titleB: papers[1].title,
-          opportunity: `Hybrid architecture synthesizing ${papers[0].methodology || 'Methodology A'} with ${papers[1].methodology || 'Methodology B'}`,
+          opportunity: `Hybrid framework synthesizing ${papers[0].methodology || 'Methodology A'} with ${papers[1].methodology || 'Methodology B'}`,
           feasibility: 'High',
         },
       ],

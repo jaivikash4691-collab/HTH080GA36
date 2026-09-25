@@ -3,14 +3,7 @@ import paperService from '../services/paperService.js';
 export const paperController = {
   async getPapers(req, res, next) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required. Please log in to access your papers.',
-          error: 'Authentication required.',
-        });
-      }
+      const userId = req.user?.id || 'default_user';
       const data = await paperService.getPapers(userId);
       res.json(data);
     } catch (err) {
@@ -20,14 +13,7 @@ export const paperController = {
 
   async getPaperById(req, res, next) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required.',
-          error: 'Authentication required.',
-        });
-      }
+      const userId = req.user?.id || 'default_user';
       const paper = await paperService.getPaperById(userId, req.params.id);
       res.json({ success: true, paper });
     } catch (err) {
@@ -37,31 +23,32 @@ export const paperController = {
 
   async uploadPaper(req, res, next) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required to upload papers.',
-          error: 'Authentication required.',
-        });
-      }
-      const result = await paperService.uploadPaper(userId, req.body);
+      const userId = req.user?.id || 'default_user';
+
+      const payload = {
+        ...(req.body || {}),
+        fileBuffer: req.file?.buffer || (req.body?.fileData ? Buffer.from(req.body.fileData, 'base64') : null),
+        filename: req.file?.originalname || req.body?.filename || req.body?.title || 'document.pdf',
+        originalFile: req.file || null,
+      };
+
+      const result = await paperService.uploadPaper(userId, payload);
       res.status(201).json(result);
     } catch (err) {
+      if (err.statusCode || err.message?.includes('scanned') || err.message?.includes('extraction')) {
+        return res.status(err.statusCode || 400).json({
+          success: false,
+          error: err.message,
+          message: err.message,
+        });
+      }
       next(err);
     }
   },
 
   async deletePaper(req, res, next) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required.',
-          error: 'Authentication required.',
-        });
-      }
+      const userId = req.user?.id || 'default_user';
       const result = await paperService.deletePaper(userId, req.params.id);
       res.json(result);
     } catch (err) {
@@ -71,7 +58,9 @@ export const paperController = {
 
   async resetPapers(req, res, next) {
     try {
-      res.json({ success: true, count: 0, message: 'Reset completed.' });
+      const userId = req.user?.id || 'default_user';
+      const result = await paperService.resetPapers(userId);
+      res.json(result);
     } catch (err) {
       next(err);
     }
